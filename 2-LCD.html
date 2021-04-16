@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LCD</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <section>
+      <header>
+        <h2>LCD</h2>
+        <p>We are gonna work with 16x2(16-column X 2-Rows)</p>
+      </header>
+
+      <main>
+        <p>
+          Each cell is composed of (5x7) Liquid Crystal, where each cell we can
+          <b>Write</b> a character in it. <br />
+          The LCD do have 16 Pins which we will detail.
+        </p>
+
+        <ul>
+          <li>First 3 Pins</li>
+          <ul>
+            <li><b>VSS:</b> The Pin we connect to the ground.</li>
+            <li><b>VCC:</b> The Pin we connect to the power source.</li>
+            <li>
+              <b>VEE:</b> The Pin controlling the internsity if light so
+              normally connected to variable resistor(potentio-meter).
+            </li>
+          </ul>
+          <li><b>RS:</b> Registor Selector</li>
+          <ul>
+            <li>If RS=0 then you select the <b>Command Register</b></li>
+            <li>If RS=1 then you select the <b>Data Register</b></li>
+          </ul>
+          <li><b>R/W:</b> Read Write Input Pin</li>
+          <ul>
+            <li>If R/W=0 when <b>Writing</b></li>
+            <li>If R/W=1 when <b>Reading</b></li>
+          </ul>
+          <li>
+            <b>E:</b>Enable Pin that deals with the time-scew problem when
+            processing the data sent on the data register
+          </li>
+          <ul>
+            <li>
+              E=0 intially and then we delay for some time to make sure all the
+              data reached the register then we make the E=1 to pulsate and
+              allow all the data to enter its registger.
+            </li>
+          </ul>
+          <li>
+            <b>D0 to D7:</b>8-Bit Data Pins and there is two ways to use these
+            data Pins to send <b>(write)</b> your ASCI code on them.
+          </li>
+          <ul>
+            <li>
+              To Use all the 8 pins-bits of data to send your data(8-bit Mode)
+            </li>
+            <ul>
+              <li>Write in the Command Register <b>0x38</b></li>
+            </ul>
+            <li>
+              To Use only the 4 pins-bits of data to send your 8-bit data(4-bit
+              Mode)
+            </li>
+            <ul>
+              <li>Write in the Command Register <b>0x28</b></li>
+            </ul>
+            <li>Last 2 Pins controls the BackLight</li>
+            <ul>
+              <li>Anode: Power pin</li>
+              <li>Cathode: Ground pin</li>
+            </ul>
+          </ul>
+        </ul>
+        <h3>How to send 8-Bits using 4-Bit Mode to send data!?</h3>
+        <p>consider I want to send data=0x43(0100 0011) To PortA</p>
+        <ul>
+          <li>(0100) is called High Nipples</li>
+          <li>(0011) is called Low Nipples</li>
+        </ul>
+        <p>
+          Then we will <b>Mask(data & 0xF0(1111 0000))</b> the high nipple
+          first:
+        </p>
+        <pre>
+          <code>
+            data = 0x34;
+            PortA = data & 0xF0;
+          </code>
+        </pre>
+        <p>
+          Now PortA is equal (0100 0000) which are the first 4 bits <br />
+          Now we need to Send the Low nipples of the data, so lets shift left
+          the data with 4 bits where the <b>0x43</b>(0100 0011) will be
+          <b>0x30</b>(0011 0000)
+        </p>
+        <pre>
+          <code>
+            PortA = data<&lt4
+          </code>
+        </pre>
+        <p>
+          But you must be wondering how are we gonna store the data that was on
+          portA
+        </p>
+        <pre>
+          <code>
+            PortA = (data & 0xF0) | (PortA & 0x0F);
+            PortA = (data <&lt 4)   | (PortA & 0x0F);
+          </code>
+        </pre>
+        <h4>What The Hell was That!!?</h4>
+        <p>
+          Relax my friend I know its totally confusing so lets break it up with
+          an example. <br />
+          PortA have 8-Pins, 4 of them are connected with the data Register of
+          the LCD so we can use the 4-Bit mode of it ok.... <br />
+        </p>
+        <ul>
+          <li>
+            Now we want to write data of 8 bits (data = 0x34 or [0011 0100]) and
+            Assume that PortA first 4 pins that are unused by the LCD had these
+            values [0000 0101] =0x05.
+          </li>
+          <li>
+            Now we will work with the High Nipples[0100]of the data first and
+            write them on portA by masking the first four binary digits.
+          </li>
+          <ul>
+            <li>
+              PortA = 0x34 & 0xF0 <br />or<br />PortA = [0011 0100] & [1111
+              0000]
+            </li>
+            <li>PortA = [0011 0000] <br />or<br />PortA = 0x30</li>
+          </ul>
+          <li>
+            Yet now we have written 4 zeros on portA unused pins by the LCD
+            therfore we need to recover what was written on them. so lets talk
+            about the second half of the equation.
+          </li>
+          <ul>
+            <li>
+              PortA = PortA & 0x0F<br />or<br />PortA = [0000 0101] & [0000
+              1111]
+            </li>
+            <li>PortA = [0000 0101]<br />or<br />PortA = 0x05</li>
+          </ul>
+          <li>Now lets OR them together and see what we end with</li>
+          <ul>
+            <li>
+              PortA = 0x30 | 0x05<br />or<br />PortA = [0011 0000] | [0000 0101]
+            </li>
+            <li>PortA = 0x35<br />or<br />PortA = [0011 0101]</li>
+          </ul>
+          <li>
+            Now You have achieved your High nipples writing them on portA last 4
+            pins while saving the values that were written on portA
+          </li>
+          <li>
+            Now just apply the same concept on the Lower Nipples of data....
+          </li>
+        </ul>
+      </main>
+    </section>
+
+    <section>
+      <header>
+        <h2>Let's CODE !!!!</h2>
+        <p>
+          As we know the LCD is a hrdware after all so its code will join the
+          HAL yet there are some registers we need to define in the MCAL where
+          the MicroController pins can interface with the LCD and finally we
+          will add a new file called <b>Configuration File</b> and this file
+          will be created from Macros that define the LCD in use so we can make
+          the LCD_HAL.c & LCD_HAL.h Generic Files.
+        </p>
+      </header>
+      <aside>
+        <header>
+          <h3>There are 3 Types of Configuration:</h3>
+        </header>
+        <ul>
+          <li>
+            <b>Pre-Build Configurations:</b>Configurations that are set in the
+            pre-Building of code by the Pre-Processor
+          </li>
+          <li><b>Link-Time Configurations:</b>Will Be Covered Later</li>
+          <li><b>Post-Build Configurations</b>Will be Covered Later</li>
+        </ul>
+      </aside>
+      <main>
+        <header>
+          <h3>LCD_config_HAL.h</h3>
+        </header>
+        <pre>
+          <code>
+            #include "DIO_MCAL.h"
+
+            #define			LCD_MODE						4
+
+            #define			LCD_8BIT_MODE_CMD_PORT			DIO_PORTA
+            #define			LCD_8BIT_MODE_DATA_PORT			DIO_PORTC
+            #define			LCD_8BIT_MODE_D_PORT			PORTC
+
+            #define			LCD_4BIT_MODE_CMD_PORT			DIO_PORTB
+            #define			LCD_4BIT_MODE_DATA_PORT			DIO_PORTA
+            #define			LCD_4BIT_MODE_D_PORT			PORTA
+
+
+            #define			LCD_RS_PIN				DIO_PIN1
+            #define			LCD_CMD_REG				DIO_PIN_LOW
+            #define			LCD_DATA_REG	                        DIO_PIN_HIGH
+
+            #define			LCD_RW_PIN				DIO_PIN2
+            #define			LCD_WRITE				DIO_PIN_LOW
+            #define			LCD_READ				DIO_PIN_HIGH
+
+            #define			LCD_E_PIN				DIO_PIN3	
+            #define			LCD_E_LOW				DIO_PIN_LOW				
+            #define			LCD_E_HIGH				DIO_PIN_HIGH				
+
+            #define			LCD_DATA_PIN0				DIO_PIN0
+            #define			LCD_DATA_PIN1				DIO_PIN1
+            #define			LCD_DATA_PIN2				DIO_PIN2
+            #define			LCD_DATA_PIN3				DIO_PIN3	
+            #define			LCD_DATA_PIN4				DIO_PIN4
+            #define			LCD_DATA_PIN5				DIO_PIN5
+            #define			LCD_DATA_PIN6				DIO_PIN6
+            #define			LCD_DATA_PIN7				DIO_PIN7
+          </code>
+        </pre>        
+        
+        <header>
+          <h3>LCD_HAL.h</h3>
+        </header>
+        <pre>
+          <code>
+            #include "LCD_Config_HAL.h"
+            #define	 F_CPU		16000000
+            #include <util/delay.h>
+
+            void LCD_Init(void);
+
+            void LCD_Write_Command(uint8 cmd);
+
+            void LCD_Clear(void);
+
+            void LCD_Write_Char (uint8 data);
+
+            void LCD_Write_String (uint8* str);
+
+            void LCD_GoToLoc(uint8 row, uint8 col);
+          </code>
+        </pre>
+        <header>
+          <h3>LCD_HAL.c</h3>
+        </header>
+        <pre>
+          <code>
+            #include "LCD_HAL.h"
+
+            void LCD_Init(void)
+            {
+              #if LCD_MODE	==		8
+                DIO_SetPINDir(LCD_8BIT_MODE_CMD_PORT, LCD_RS_PIN,	DIO_PIN_OUTPUT);
+                DIO_SetPINDir(LCD_8BIT_MODE_CMD_PORT, LCD_RW_PIN,	DIO_PIN_OUTPUT);
+                DIO_SetPINDir(LCD_8BIT_MODE_CMD_PORT, LCD_E_PIN,	DIO_PIN_OUTPUT);
+                
+                DIO_SetPortDir(LCD_8BIT_MODE_DATA_PORT, DIO_PORT_OUTPUT);
+                
+                _delay_ms(100);
+                
+                LCD_Write_Command(0x38);
+                LCD_Write_Command(0x0C);
+                LCD_Write_Command(0x0E);
+                LCD_Write_Command(0x01);
+                LCD_Write_Command(0x02);
+
+              #elif LCD_MODE	==		4
+                DIO_SetPINDir(LCD_4BIT_MODE_CMD_PORT, LCD_RS_PIN,	DIO_PIN_OUTPUT);
+                DIO_SetPINDir(LCD_4BIT_MODE_CMD_PORT, LCD_RW_PIN,	DIO_PIN_OUTPUT);
+                DIO_SetPINDir(LCD_4BIT_MODE_CMD_PORT, LCD_E_PIN,	DIO_PIN_OUTPUT);
+                
+                DIO_SetPINDir(LCD_4BIT_MODE_DATA_PORT, LCD_DATA_PIN4, DIO_PIN_OUTPUT);
+                DIO_SetPINDir(LCD_4BIT_MODE_DATA_PORT, LCD_DATA_PIN5, DIO_PIN_OUTPUT);
+                DIO_SetPINDir(LCD_4BIT_MODE_DATA_PORT, LCD_DATA_PIN6, DIO_PIN_OUTPUT);
+                DIO_SetPINDir(LCD_4BIT_MODE_DATA_PORT, LCD_DATA_PIN7, DIO_PIN_OUTPUT);
+                
+                _delay_ms(100);
+              
+                LCD_Write_Command(0x33);
+                LCD_Write_Command(0x32);
+                LCD_Write_Command(0x28);
+                LCD_Write_Command(0x06);
+                LCD_Write_Command(0x0E);
+                LCD_Write_Command(0x01);
+                LCD_Write_Command(0x02);
+                
+              #endif	
+            }
+
+            void LCD_Write_Command(uint8 cmd)
+            {
+              #if		LCD_MODE	==			4
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_RS_PIN, LCD_CMD_REG);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_RW_PIN, LCD_WRITE);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_LOW);
+
+                LCD_4BIT_MODE_D_PORT = (cmd & 0x0F) | (LCD_4BIT_MODE_D_PORT & 0xF0);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_HIGH);
+                _delay_ms(1);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_LOW);
+              
+                LCD_4BIT_MODE_D_PORT = (cmd << 4) | (LCD_4BIT_MODE_D_PORT & 0xF0);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_HIGH);
+                _delay_ms(1);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_LOW);
+                _delay_ms(5);
+              
+                
+              #elif	LCD_MODE		==		8
+                DIO_SetPinValue(LCD_8BIT_MODE_CMD_PORT, LCD_RS_PIN, LCD_CMD_REG);
+                DIO_SetPinValue(LCD_8BIT_MODE_CMD_PORT, LCD_RW_PIN, LCD_WRITE);
+                DIO_SetPinValue(LCD_8BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_LOW);
+
+                LCD_8BIT_MODE_D_PORT = cmd;
+                _delay_ms(5);
+                
+              #endif
+
+            }
+
+            void LCD_Clear(void)
+            {
+              LCD_Write_Command(0x01);
+            }
+
+            void LCD_Write_Char (uint8 data)
+            {
+              #if		LCD_MODE	==			4
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_RS_PIN, LCD_DATA_REG);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_RW_PIN, LCD_WRITE);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_LOW);
+
+                LCD_4BIT_MODE_D_PORT = (data & 0x0F) | (LCD_4BIT_MODE_D_PORT & 0xF0);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_HIGH);
+                _delay_ms(1);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_LOW);
+
+                LCD_4BIT_MODE_D_PORT = (data << 4) | (LCD_4BIT_MODE_D_PORT & 0xF0);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_HIGH);
+                _delay_ms(1);
+                DIO_SetPinValue(LCD_4BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_LOW);
+                _delay_ms(5);
+
+
+              #elif	LCD_MODE		==		8
+                DIO_SetPinValue(LCD_8BIT_MODE_CMD_PORT, LCD_RS_PIN, LCD_DATA_REG);
+                DIO_SetPinValue(LCD_8BIT_MODE_CMD_PORT, LCD_RW_PIN, LCD_WRITE);
+                DIO_SetPinValue(LCD_8BIT_MODE_CMD_PORT, LCD_E_PIN, LCD_E_LOW);
+
+                LCD_8BIT_MODE_D_PORT = data;
+                _delay_ms(5);
+
+              #endif
+            }
+
+            void LCD_Write_String (uint8* str)
+            {
+              uint8 cnt = 0;
+              while(str[cnt] != '\0')
+              {
+                LCD_Write_Char(str[cnt]);
+                cnt++;
+              }
+            }
+
+            void LCD_GoToLoc(uint8 row, uint8 col)
+            {
+              uint8 Loc[2] = {0x80, 0xC0};
+              
+              LCD_Write_Command(Loc[row]+col);
+            }
+
+          </code>
+        </pre>
+      </main>
+    </section>
+  </body>
+</html>

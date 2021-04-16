@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interfacing</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Embedded Systems -Interfacing-</h1>
+
+    <nav>
+      <h2>Pereferals</h2>
+      <ul>
+        <li>DIO</li>
+        <li>LCD</li>
+        <li>Interrupts</li>
+        <li>Timers</li>
+      </ul>
+    </nav>
+
+    <p class="intro">
+      Wokring with ATMEGA32 which has 40 pins(8 pins per port which gives a
+      total of 32 pins and the other 8 powering the MC, where each pin can work
+      primerly as a Digital input/Output and got an Alternative job. so lets
+      discover how all this works.
+    </p>
+
+    <main>
+      <section>
+        <h3>Layered Architecture</h3>
+        <h4>Memory</h4>
+        <h6>There are three Main Memory types:</h6>
+        <ul>
+          <li>RAM</li>
+          <li>ROM</li>
+          <li>Pereferal Registers</li>
+        </ul>
+        <p>
+          Any Micro-Controller got a Pereferal registers map which we need to
+          Define using Macros such that it can be accessed whenever we write or
+          read from it. <br />
+          Therfore its decided as a way of management to create a Layered
+          Architecture or lets say a management system to create any code for
+          accessability and ability to edit any code easily.
+        </p>
+        There are some Files that we will need all along which we will include
+        in each and every file we create later which are:
+        <ul>
+          <li>STD.h: containes the standard definition of data Types.</li>
+          <li>
+            BIT_MATH.h: The file that gives you access to create operations on
+            registers.
+          </li>
+          <li>MCU.h: Containes the Register Definitions.</li>
+        </ul>
+        <b>Lets see what's written in each and every file:</b>
+        <h5>STD.h</h5>
+        <pre><code>
+    typedef unsigned char  uint8;
+    typedef signed char    sint8;
+    typedef unsigned short uint16;
+    typedef signed short   sint16;
+    typedef unsigned long  uint32;
+    typedef signed long    sint32;
+    typedef float          float32;
+    typedef double         float64;          
+    </code>
+    </pre>
+
+        <h5>BIT_MATH.h</h5>
+        <pre><code>
+    #define SET_BIT(REG,BIT)  (REG |= (1<<(BIT)))
+
+    #define CLR_BIT(REG,BIT)  (REG &=~ (1<<(BIT)))
+
+    #define Toggle_BIT(REG,BIT) (REG ^= (1<<(BIT)))
+
+    #define GET_BIT(REG,BIT)  ((REG >> BIT) & (0X01))
+    </code>
+    </pre>
+
+        <h5>MCU.h</h5>
+        <pre><code>
+    #define		PINA	(*(volatile char*)0x39)
+    #define		DDRA	(*(volatile char*)0x3A)
+    #define		PORTA	(*(volatile char*)0x3B)
+
+       .......We will understand this deeply in the upcoming seciton......
+    ......We will add to it as long as we go forward with the Pereferals......
+    </code>
+    </pre>
+    
+    <h4>What is the Layered Architecture!? </h4>
+    <p>
+      From Top Layer to Bottom:
+      <ol>
+        <li>Application <b><em>"APP"</em></b></li>
+        <li>Hardware Abstracted Layer <b><em>"HAL"</em></b></li>
+        <li>Micro-Controller Abstracted Layer <b><em>"MCAL"</em></b></li>
+      </ol>
+      <span><h5>Application</h5>
+      The place where we write only the logic of of the application not dependent on the micro controller Pereferals or the hardware being connected.</span>
+      <span><h5>HAL</h5>
+      Includes all the hardware being connected to the micro controller such as servo-motor, led, button LCD, etc...</span>
+      <span><h5>MCAL</h5>
+      Where you can access the registers of different pereferals connected to the Micro-Controller</span>
+    </p>
+      </section>
+
+      <section>
+          <h3>Digital Input output</h3>
+          <p>
+            <span
+              ><em
+                >How can any pin work as input and ouput at the same time??</em
+              ></span
+            ><br />
+            The Secret Component is the <b>Tri-State-Buffer</b>, Look at the image
+            below as a refrence to the curcuit.
+            <img src="pics/TriStateBuffer.png" alt="DIO Circuit" />
+            so let us trace if we entered
+            <b>1 on <em>C Component of the Tri-State-Buffer(TSB)</em></b
+            ><br />
+            you can find that the
+            <em><b>Ouput Circuit will be Enabled</b></em> and the
+            <em><b>Input Circuit will be Disabled</b></em
+            ><br />
+            Therfore the First step is to decide the <b>Direction</b> of the the
+            TSB and we will call it the <b>DDR(Data Direction Register)</b> Second
+            step is either to define the input value or write the output we wanna
+            see so the type of memory we will use will be a register and we will
+            call the <b>input register <em>"PIN"</em></b> while the
+            <b>Output register <em>"PORT"</em></b
+            >.<br />
+            Each register Maps 8 bits which means 8 pins can be controlled in case
+            of PORT Register or PIN Register or Direction Register. <br>
+          
+          Now that we understand the components to control any pin lets configure
+          them all on ATMEGA32 and you can find the information that is gonna be
+          written below on the DataSheet Register Summary section.
+          <img src="pics/DIO Registers.png" alt="DIO Reg" />
+          Now The Code we will implement it in a file called <b>MCU.h</b>
+        </p>
+          <h5>MCU.h</h5>
+          <p>
+          We will add to it as long as we go forward with the Pereferals which
+          will contain all the registers definitions
+        </p>
+          <pre><code>
+      /********************  DIO Regs  ********************/
+
+      #define		PINA	(*(volatile char*)0x39)
+      #define		DDRA	(*(volatile char*)0x3A)
+      #define		PORTA	(*(volatile char*)0x3B)
+      
+      #define		PINB	(*(volatile char*)0x36)
+      #define		DDRB	(*(volatile char*)0x37)
+      #define		PORTB	(*(volatile char*)0x38)
+      
+      #define		PINC	(*(volatile char*)0x33)
+      #define		DDRC	(*(volatile char*)0x34)
+      #define		PORTC	(*(volatile char*)0x35)
+      
+      #define		PIND	(*(volatile char*)0x30)
+      #define		DDRD	(*(volatile char*)0x31)
+      #define		PORTD	(*(volatile char*)0x32)
+      </code>
+      </pre>
+        <p>
+          now lets use the bit math library we already created to help us light a
+          lid.<br />
+          <ol>
+            <li>connect a lid to portC Pin7</li>
+            <li>write this code down below in the <b>main.c</b> file.</li>
+          </ol>
+        </p>
+          <pre><code>
+    int main(void)
+    {
+      SET_BIT(DDRC,7);   /*Set the direction of the TSB to be 1 so it will be used as Output*/
+      SET_BIT(PORTC,7);  /*Set the 7th bit to 1 on the PORT Register*/
+      CLR_BIT(PINC,7);   /*Not an important step to put 0 in the PIN REG cuz by default they are all zeros*/
+    }
+      </code>
+      </pre>
+      <p>
+      Congrats my friend You made the very first functionable code but let me
+      ask a question are we gonna write these whole three lines every time we
+      wanna light a led!!!! "we human beings are very lazy &#128541 " so let us create
+      our very first LED Library that can do this for us by refering to
+      functions. <br>
+      So lets think about it what are the things we need the LED do what are the functions of an LED!?
+      <ol>
+        <li>LED_ON()</li>
+        <li>LED_OFF()</li>
+        <li>LED_TOGGLE(time)</li>
+      </ol>
+      As we agreed on the Layered Architecture we will create two files a LED.c file and a 
+      LED.h where we write the functions hard coded in the c file while the headers 
+      calls the functions in the header file. (LAZINESSSS &#128514) 
+    </p>
+      <h5>LED.h</h5>
+      <pre><code>
+        #include  MCU.h
+        #include  BIT_MATH.h
+
+      void LED0_ON(void);
+      void LED0_OFF(void);
+      void LED0_TOGGLE(void);
+      void LED0_INTI(void);
+      </code>
+      </pre>
+
+      <h5>LED.c</h5>
+      <pre><code>
+        #include LED.h
+
+      void LED0_ON(void)
+      {
+        SET_BIT(PORTC,7);  /*Set the 7th bit to 1 on the PORT Register*/
+      }
+
+      void LED0_OFF(void)
+      {
+        CLR_BIT(PORTC,7);  /*Set the 7th bit to 1 on the PORT Register*/
+      }
+
+      void LED0_Toggle(void)
+      {
+        Toggle_BIT(PORTC,7);
+      }
+      
+      void LED0_INTI(void)
+      {
+        SET_BIT(DDRC,7);   /*Set the direction of the TSB to be 1 so it will be used as Output*/
+      }
+      </code>
+      </pre>
+      <section>
+        <h4>Button</h4>
+      <p>
+        What do you think is needed for a button to be Configured???<br>
+        Yes, I believe you guessed the answer its pin needs to be configured as an <b>INPUT</b>, which means that we will deal with the input memory <b>(PIN REGISTER)</b> yet there is an important matter that we need to talk about first is the button connected with a <b>Pull Down Resistor</b> or a <b>Pull Up Resistor</b> and what are those terms??<br>
+        
+        Those Terms Tackle the default state of a button whether its absolute value is zero volt or 5 volt to make sure that there is a refrence value we measure from avoiding the noise check the diagram below.
+        <img src="Pics/PullUpPullDownResistors.png" alt="PullUpPullDown">
+      
+        Yet this is not the only noise tackling any mechanical button, the other problem called <b>Bouncing Effect</b>. <br>
+        Bouncing is the unstable noise till the button is full opened or closed, thankfully there is a software solution for this sort of error which is called the debouncing and it's a delay to the reading of average 10ms-20ms till the signal stabalizes. 
+      </p>
+        <h5>BTN.h</h5>
+        <pre><code>
+          #include  MCU.h
+          #include  BIT_MATH.h
+          #include  STD.h
+          
+        void BTN0_INTI(void);
+        void BTN0_GetValue(void);
+        </code>
+        </pre>
+    
+        <h5>BTN.c</h5>
+        <pre><code>
+          #include BTN.h
+        
+        void BTN9_INTI(void)
+        {
+          CLR_BIT(DDRB,0);   /*Set the direction of the TSB to be 1 so it will be used as Output*/
+        }
+
+        uint8 BTN0_GetValue(void)
+        {
+          uint8 value = 0;
+          value = GET_BIT(DDRB,0);
+          
+          /* To make sure that the signal is stable (DeBouncing)*/
+          while(GET_BIT(DDRB,0) == 1);
+          _delay_ms(20);
+          return value
+        }
+        </code>
+        </pre>
+        </section> 
+      </section>
+      
+      <section>
+        <header>
+          <h3>What The Hell is "DIO Module"??</h3>
+        </header>
+        <p>
+          Till Now we created files that are very hard to revamp, consider changing the micro controller can you imagine how much work load this can take us to make our application work. So lets apply what was introduced in the layered Architecture part.
+        </p>
+        <aside>        
+          <h4>Reminder:</h4>          
+          <ol>
+            <li>Micro-Controller Abstraction Layer</li>
+            <li>Hardware Abstraction Layer</li>
+            <li>Build your Application</li>
+          </ol>
+        </aside>
+        
+        <section>
+          <header>
+            <h3>1-MCAL Layer</h3>
+            <p>We are going to create a Header File and a c file for the MicroController ATMEGA32 Definitions with the DIO</p>
+          </header>
+          
+          <h4>DIO_MCAL.h</h4>
+          <pre>
+            <code>
+              #include "MCU.h"
+              #include "STD.h"
+              #include "BIT_Math.h"
+              
+              #define		DIO_PORTA		0
+              #define		DIO_PORTB		1
+              #define		DIO_PORTC		2
+              #define		DIO_PORTD		3
+              
+              #define		DIO_PIN0		0
+              #define		DIO_PIN1		1
+              #define		DIO_PIN2		2
+              #define		DIO_PIN3		3
+              #define		DIO_PIN4		4
+              #define		DIO_PIN5		5
+              #define		DIO_PIN6		6
+              #define		DIO_PIN7		7
+              
+              #define		DIO_PORT_OUTPUT		0xFF	
+              #define		DIO_PORT_INPUT		0x00
+              
+              #define		DIO_PIN_OUTPUT		1
+              #define		DIO_PIN_INPUT		0
+              
+              #define		DIO_PORT_HIGH		0xFF
+              #define		DIO_PORT_LOW		0x00
+              
+              #define		DIO_PIN_HIGH		1
+              #define		DIO_PIN_LOW			0
+              
+              void DIO_SetPortDir(uint8 port, uint8 direction);
+              void DIO_SetPINDir(uint8 port, uint8 pin, uint8 direction);
+              
+              void DIO_SetPortValue(uint8 port, uint8 value);
+              void DIO_SetPinValue(uint8 port, uint8 pin, uint8 value);
+              
+              void DIO_ReadPinValue(uint8 port, uint8 pin, uint8 *recall_value);
+              void DIO_ReadPortValue(uint8 port, uint8 *recall_value);
+              
+              void DIO_TogglePin(uint8 port, uint8 pin);
+              void DIO_TogglePort(uint8 port);              
+            </code>
+          </pre>
+          <h4>DIO_MCAL.c</h4>
+          <pre>
+            <code>
+              #include "DIO_MCAL.h"
+
+              void DIO_SetPortDir(uint8 port, uint8 direction)
+              {
+                switch(port)
+                {
+                  case DIO_PORTA:
+                    DDRA = direction;
+                    break;
+                    
+                  case DIO_PORTB:
+                    DDRB = direction;
+                    break;
+                  
+                  case DIO_PORTC:
+                    DDRC = direction;
+                    break;
+                  
+                  case DIO_PORTD:
+                    DDRD = direction;
+                    break;
+                
+                  default:
+                  break;
+                }	
+              }
+
+
+              void DIO_SetPINDir(uint8 port, uint8 pin, uint8 direction)
+              {
+                switch(direction)
+                {
+                  case DIO_PIN_OUTPUT :
+                    switch(port)
+                    {
+                      case(DIO_PORTA):
+                        SET_BIT(DDRA,pin);
+                        break;
+                      
+                      case(DIO_PORTB):
+                        SET_BIT(DDRB,pin);
+                        break;
+                      
+                      case(DIO_PORTC):
+                        SET_BIT(DDRC,pin);
+                        break;
+                      
+                      case(DIO_PORTD):
+                        SET_BIT(DDRD,pin);
+                        break;
+                      
+                      default:
+                      break;
+                    }
+                    break;
+                  
+                  case(DIO_PIN_INPUT):
+                    switch(port)
+                    {
+                      case(DIO_PORTA):
+                        CLR_BIT(DDRA,pin);
+                        break;
+                    
+                      case(DIO_PORTB):
+                        CLR_BIT(DDRB,pin);
+                        break;
+                    
+                      case(DIO_PORTC):
+                        CLR_BIT(DDRC,pin);
+                        break;
+                      
+                      case(DIO_PORTD):
+                        CLR_BIT(DDRD,pin);
+                        break;
+                    
+                      default:
+                      break;
+                    }
+                    break;
+                    
+                    default:
+                    break;
+                }
+              }
+
+              void DIO_SetPortValue(uint8 port, uint8 value)
+              {
+                switch(port)
+                {
+                  case (DIO_PORTA):
+                    PORTA=value;
+                    break;
+                  
+                  case (DIO_PORTB):
+                  PORTB=value;
+                  break;
+                  
+                  case (DIO_PORTC):
+                  PORTC=value;
+                  break;
+                  
+                  case (DIO_PORTD):
+                  PORTD=value;
+                  break;
+                  
+                  default:
+                  break;
+                }
+              }
+
+              void DIO_SetPinValue(uint8 port, uint8 pin, uint8 value)
+              {
+                switch(value)
+                {
+                  case (DIO_PIN_HIGH):
+                  switch(port)
+                  {
+                    case DIO_PORTA:
+                      SET_BIT(PORTA,pin);
+                      break;
+                    
+                    case DIO_PORTB:
+                    SET_BIT(PORTB,pin);
+                    break;
+                    
+                    case DIO_PORTC:
+                    SET_BIT(PORTC,pin);
+                    break;
+                    
+                    case DIO_PORTD:
+                    SET_BIT(PORTD,pin);
+                    break;
+                    
+                    default:
+                    break;
+                  }
+                  break;
+                  
+                  case (DIO_PIN_LOW):
+                  switch(port)
+                  {
+                    case DIO_PORTA:
+                    CLR_BIT(PORTA,pin);
+                    break;
+                    
+                    case DIO_PORTB:
+                    CLR_BIT(PORTB,pin);
+                    break;
+                    
+                    case DIO_PORTC:
+                    CLR_BIT(PORTC,pin);
+                    break;
+                    
+                    case DIO_PORTD:
+                    CLR_BIT(PORTD,pin);
+                    break;
+                    
+                    default:
+                    break;
+                  }	
+                  break;
+                  
+                  default:
+                  break;
+                }
+              }
+
+              void DIO_ReadPinValue(uint8 port, uint8 pin, uint8 *recall_value)
+              {
+                switch (port)
+                {
+                  case DIO_PORTA:
+                    *recall_value = GET_BIT(PINA,pin);
+                    break;
+                    
+                  case DIO_PORTB:
+                  *recall_value = GET_BIT(PINB,pin);
+                  break;
+                  
+                  case DIO_PORTC:
+                  *recall_value = GET_BIT(PINC,pin);
+                  break;
+                  
+                  case DIO_PORTD:
+                  *recall_value = GET_BIT(PIND,pin);
+                  break;
+                    
+                  default:
+                  break;
+                }
+              }
+              void DIO_ReadPortValue(uint8 port, uint8 *recall_value)
+              {
+                switch (port)
+                {
+                  case (DIO_PORTA):
+                    *recall_value = PINA;
+                    break;
+                    
+                  case (DIO_PORTB):
+                  *recall_value = PINB;
+                  break;
+                  
+                  case (DIO_PORTC):
+                  *recall_value = PINC;
+                  break;
+                  
+                  case (DIO_PORTD):
+                  *recall_value = PIND;
+                  break;	
+                  
+                  default:
+                  break;
+                }
+              }
+
+              void DIO_TogglePin(uint8 port, uint8 pin)
+              {
+                switch(port)
+                {
+                  case DIO_PORTA:
+                    Toggle_BIT(PORTA,pin);
+                    break;
+                    
+                  case DIO_PORTB:
+                  Toggle_BIT(PORTB,pin);
+                  break;
+                  
+                  case DIO_PORTC:
+                  Toggle_BIT(PORTC,pin);
+                  break;
+                  
+                  case DIO_PORTD:
+                  Toggle_BIT(PORTD,pin);
+                  break;
+                  
+                  default:
+                  break;	
+                }
+              }
+              void DIO_TogglePort(uint8 port)
+              {
+                switch(port)
+                {
+                  case DIO_PORTA:
+                    PORTA ^= 0xff;
+                    break;
+                    
+                  case DIO_PORTB:
+                  PORTB ^= 0xff;
+                  break;
+                  
+                  case DIO_PORTC:
+                  PORTC ^= 0xff;
+                  break;
+                  
+                  case DIO_PORTD:
+                  PORTD ^= 0xff;
+                  break;
+                  
+                  default:
+                  break; 
+                }
+              }
+            </code>
+          </pre>
+        </section>
+
+        <section>
+          <header>
+            <h3>2-HAL Layer</h3>
+            <p>We are going to create a Header File and a c file for any hardware that is going to use the DIO-Module</p>
+          </header>
+
+          <h4>LED_HAL.h</h4>
+          <pre>
+            <code>
+              #include "DIO_MCAL.h"
+
+              #define LED0	0
+              #define LED1	1
+              #define LED2	2
+              
+              
+              void LED_Init(uint8 LED);
+              void LED_ON(uint8 LED);
+              void LED_OFF(uint8 LED);
+              void LED_Toggle(uint8 LED);
+            </code>
+          </pre>
+          <h4>LED_HAL.c</h4>
+          <pre>
+            <code>
+              #include "LED_HAL.h"
+
+              void LED_Init(uint8 LED)
+              {
+                switch(LED)
+                {
+                  case LED0:
+                    DIO_SetPINDir(DIO_PORTC,DIO_PIN2,DIO_PIN_OUTPUT);	
+                    break;
+                  case LED1:
+                    DIO_SetPINDir(DIO_PORTC,DIO_PIN7,DIO_PIN_OUTPUT);
+                    break;
+                  case LED2:
+                    DIO_SetPINDir(DIO_PORTD,DIO_PIN3,DIO_PIN_OUTPUT);
+                    break;	
+                    
+                  default:
+                    break;
+                }	
+              }
+
+              void LED_ON(uint8 LED)
+              {
+                switch (LED)
+                {
+                  case LED0:
+                    DIO_SetPinValue(DIO_PORTC, DIO_PIN2, DIO_PIN_HIGH);
+                    break;
+                  case LED1:
+                    DIO_SetPinValue(DIO_PORTC,DIO_PIN7,DIO_PIN_HIGH);
+                    break;
+                  case LED2:
+                    DIO_SetPinValue(DIO_PORTD,DIO_PIN3,DIO_PIN_HIGH);
+                    break;
+                  
+                  default:
+                    break;
+                }
+                
+              }
+
+              void LED_OFF(uint8 LED)
+              {
+                switch(LED)
+                {
+                  case LED0:
+                    DIO_SetPinValue(DIO_PORTC,DIO_PIN2,DIO_PIN_LOW);
+                    break;
+                  case LED1:
+                    DIO_SetPinValue(DIO_PORTC,DIO_PIN7,DIO_PIN_LOW);
+                    break;
+                  case LED2:
+                    DIO_SetPinValue(DIO_PORTD,DIO_PIN3,DIO_PIN_LOW);		
+                    break;
+                  
+                  default:
+                  break;
+                }
+              }
+
+              void LED_Toggle(uint8 LED)
+              {
+                switch (LED)
+                {
+                  case LED0:
+                    DIO_TogglePin(DIO_PORTC,DIO_PIN2);
+                    break;
+                  case LED1:
+                    DIO_TogglePin(DIO_PORTC,DIO_PIN7);
+                    break;
+                  case LED2: 
+                    DIO_TogglePin(DIO_PORTD,DIO_PIN3);
+                    break;			
+                }
+                
+              }
+            </code>
+          </pre>
+          
+          <h4>BTN_HAL.h</h4>
+          <pre>
+            <code>
+              #include "DIO_MCAL.h"
+              #include "DIO_MCAL.h"
+
+              #define	F_CPU	16000000
+              #include &ltutil/delay.h>
+
+              void BTN0_INIT (void);
+              uint8 BTN0_GetValue (void);
+
+              void BTN1_INIT (void);
+              uint8 BTN1_GetValue (void);
+
+              void BTN2_INIT (void);
+              uint8 BTN2_GetValue (void);
+            </code>
+          </pre>
+
+          <h4>BTN_HAL.c</h4>
+          <pre>
+            <code>
+              #include "BTN_HAL.h"
+
+              void BTN0_INIT (void)
+              {
+                DIO_SetPINDir(DIO_PORTB, DIO_PIN0, DIO_PIN_INPUT);
+              }
+
+              uint8 BTN0_GetValue (void)
+              {
+                uint8 value = 0;
+                DIO_ReadPinValue(DIO_PORTB, DIO_PIN0, &value);
+                while (GET_BIT(PINB,0) == 1)
+                _delay_ms(20);
+                
+                return value;
+              }
+
+              void BTN1_INIT (void)
+              {
+                DIO_SetPINDir(DIO_PORTB, DIO_PIN4, DIO_PIN_INPUT);
+              }
+
+              uint8 BTN1_GetValue (void)
+              {
+                uint8 value = 0;
+                DIO_ReadPinValue(DIO_PORTB, DIO_PIN4, &value);
+                while (GET_BIT(PINB,4) == 1)
+                _delay_ms(20);
+                
+                return value;
+              }
+
+              void BTN2_INIT (void)
+              {
+                DIO_SetPINDir(DIO_PORTD, DIO_PIN2, DIO_PIN_INPUT);
+              }
+
+              uint8 BTN2_GetValue (void)
+              {
+                uint8 value = 0;
+                DIO_ReadPinValue(DIO_PORTD, DIO_PIN2, &value);
+                while (GET_BIT(PIND,2) == 1)
+                _delay_ms(20);
+                
+                return value;
+              }
+            </code>
+          </pre>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interrupts</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <section>
+      <header>
+        <h1>Interrupts</h1>
+      </header>
+      <main>
+        <p>
+          First thing is first We need to dicuss an important concept called
+          System faults.
+        </p>
+        <h3>What causes System Faults/Exceptions !?</h3>
+        <ul>
+          <li>Bus Fault</li>
+          <li>Memory Faults</li>
+          <li>Dividing by Zero</li>
+          <li>Reset</li>
+        </ul>
+        <p>
+          Secondly there are Pereferal Exceptions that becomes priority for the
+          CPU to excute these are called <b>INTERRUPTS</b>. <br />
+          For every Interrupt we need to define its handeler which is the
+          way(code) to handle the Interrupt this code is called
+          <b>Interrupt Service Routine (ISR)</b>.
+        </p>
+        <h3>
+          Now you must be wondering what is Difference between a normal function
+          and an ISR!?
+        </h3>
+        <p>
+          A normal function excutes within the code at a certain time but an ISR
+          runs wherever the code reached, it always takes the priority whenever
+          an interrupt condition happens.
+        </p>
+        <h3>
+          Now lets ask a question, considering an inntrupt excutted and the ISR
+          ran, will the code start running from the beginning again?!?!
+        </h3>
+        <p>
+          The answer is ofcourse not, this would be a total waste of time but
+          the real question here is <b>HOW??</b> <br />
+          
+        </p>
+      </main>
+    </section>
+  </body>
+</html>
