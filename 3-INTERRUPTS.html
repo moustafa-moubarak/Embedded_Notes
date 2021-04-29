@@ -366,6 +366,50 @@
           </code>
         </pre>
       </main>
+      <main>
+        <p>
+          Now that we finished the Coding inside the HAL and finally finished
+          the External Interrupts Module lets make a very simple<b>ISR</b> to
+          demonstarte the application of the Interrupt using a led, button and
+          the Interrupt. <br />
+          so let's code in the <em>'main.c'</em> a small application
+        </p>
+        <p>Notes:</p>
+        <ul>
+          <li>
+            I have a button connected to PortD pin 2 which works as INT0 as per
+            the datasheet of the ATMEGA32.
+          </li>
+          <li>
+            The code we are going to crate will toggle the led as soon as the
+            button is pushed.
+          </li>
+        </ul>
+        <p>so LETS CODE!!!</p>
+        <pre>
+          <code>
+            #include "EXT_INT_Config.h"
+            #include "LED_HAL.h"
+            #include <avr/interrupt.h>
+
+
+            int main(void)
+            {
+              LED0_Init();
+              
+              External_INT0_Init();
+              
+                while (1) 
+                {
+                }
+            }
+            ISR(INT0_vect)
+            {
+              LED0_Toggle();
+            }
+          </code>
+        </pre>
+      </main>
     </section>
   </body>
 </html>
