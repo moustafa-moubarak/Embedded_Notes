@@ -38,7 +38,10 @@
         <p>
           A normal function excutes within the code at a certain time but an ISR
           runs wherever the code reached, it always takes the priority whenever
-          an interrupt condition happens.
+          an interrupt condition happens. <br />
+          we Can make any code in a serial process by using _ms_delay this
+          serial process is called blocking/polling yet the interrupt is a
+          parallel process and the controller is signal through the hardware.
         </p>
         <h3>
           Now lets ask a question, considering an inntrupt excutted and the ISR
@@ -47,8 +50,321 @@
         <p>
           The answer is ofcourse not, this would be a total waste of time but
           the real question here is <b>HOW??</b> <br />
-          
         </p>
+        <aside>
+          <figure>
+            <img src="Pics/CPUreg.png" alt="CPU_REGs" />
+          </figure>
+          <ul>
+            <li>
+              <b>R0, R1 ,R2:</b>They are the CPU
+              <em>General Purpose Registers.</em> that holds the variables.
+            </li>
+            <li>
+              <b>PC:</b>Is a general purpose registers
+              <em>Program Counter</em> which saves the upcoming instruction to
+              be excuted.
+            </li>
+            <li>
+              <b>SP:</b>Called the <em>Stack Pointer</em> One of its main
+              functions is to point on the last address of the stack memory in
+              RAM.
+            </li>
+            <li>
+              <b>ALU:</b>
+              <em>arithmetic logic unit.</em>
+            </li>
+          </ul>
+        </aside>
+        <p>
+          Lets imagine that we want to take a capture for the CPU where its
+          excuting an imaginary function called ADD() and all the general
+          purpose registers are full of values and addresses and an interrupt
+          command just came to the CPU telling it to leave everything and to
+          excute the ISR so where will these values go, how will it handle the
+          <b>parallel process</b> we were talking about??
+        </p>
+        <ol>
+          <li>
+            It will <b>PUSH</b>/Save the
+            <b>Context</b>/values-inside-the-registers inside the frame of the
+            function Add(), scuh that when the ISR finishes excution, the CPU
+            would understand the place it should continue from again.
+          </li>
+          <li>
+            The ISR code of the relevant interrupt will be inserted in the RAM
+            Stack to be excuted and after its done it will be removed from the
+            stack yet we didn't know where did the ISR came from, so lets hold
+            on to this point and we will discuss it later.
+          </li>
+          <li>Now the CPU will <b>POP</b> the context out.</li>
+        </ol>
+        <p>
+          These Steps details the idea of a process called
+          <b>CONTEXT SWITCHING</b>
+        </p>
+        <p>
+          The Interrupt sevice routines are normal functions saved in the ROM
+          text partition with all the other functions yet their addresses are
+          saved inside something called a <b>Vector-Table</b>, such that when an
+          ISR is called inside the main function the CPU would understand which
+          address to call the ISR text commands.
+        </p>
+        <aside>
+          <p>
+            <b>Note:</b> The Contexts of Interrupts are saved inside the RAM
+            while the action itself excutes inside the ROM this process is
+            called Jumping on machine level.
+          </p>
+        </aside>
+        <p>
+          There is a hardware component that is called
+          <b><em>Programmable Interrupt Controller</em></b
+          >, Its main job is to point out the addresses of the interrupts from
+          the <b>Vector Table</b>. <br />
+          One Other Job for the <em>PIC</em> is to manage the Priority of the
+          Interrupts in case Many Interrupts happened at the same time, and it
+          manages it by the order of it inside the Vector table. And we can't
+          change the priorities in case of ATMEGA32, yet inside the ARM
+          Architecture the NVEC (Nested vector interrupt control), which is the
+          PIC inside the ARM architecture, we can controll the priorities
+          Through Nesting the Interrupts.
+        </p>
+        <figure>
+          <h4>Interrupt Vector Table of ATMEGA32</h4>
+          <img src="Pics/InterruptVectorTable.png" alt="INT_VECTOR" />
+        </figure>
+        <p>To Enable the <em>PIC</em> It needs Three signals:</p>
+        <ol>
+          <li><b>GIE:</b>General Interrupt Enable</li>
+          <li><b>PIE:</b>Pereferal Interrupt Enable</li>
+          <li>
+            <b>FLAG:</b>The Final Signal to call the ISR from the Vector table
+          </li>
+        </ol>
+        <aside>
+          <p>
+            An Improtant Matter we need to point out is the Timing of everything
+            since the whole prcess is parallel.
+          </p>
+          <figure>
+            <h4>Interrupt Timing Diagram</h4>
+            <img src="Pics/INT_Timing Diagram.png" alt="INTTD" />
+          </figure>
+        </aside>
+      </main>
+    </section>
+
+    <section>
+      <header>
+        <h2>Lets CODE!!</h2>
+      </header>
+      <main>
+        <p>
+          Let us Define the Registers of External Interrupts and add them to
+          <b><em>MCU.h</em></b> we created before.
+        </p>
+        <pre>
+          <code>
+            /****************** EXT INT REG ******************/
+
+            #define		SREG		*((volatile uint8*) 0x5F)
+            #define		MCUCR		*((volatile uint8*) 0x55)
+            #define		MCUSR		*((volatile uint8*) 0x54)
+            #define		GICR		*((volatile uint8*) 0x5B)
+            #define		GIFR		*((volatile uint8*) 0x5A)
+          </code>
+        </pre>
+        <p>
+          Now lets define the External interrupt configuration file and detail
+          everything written in this file after<b><em>EXT_INT_Config.h</em></b
+          ><br />
+        </p>
+        <pre>
+          <code>
+            #define		GLOBAL_INTERRUPT				GLOBAL_INTERRUPT_ENABLE
+
+            #define		EXTERNAL_INT0_TRIGGER			TRIGGER_RISING
+            #define		EXTERNAL_INT1_TRIGGER			TRIGGER_RISING
+            #define		EXTERNAL_INT2_TRIGGER			TRIGGER_RISING
+          </code>
+        </pre>
+        <ul>
+          <li>
+            As mentioned before we need to enable the External Interrupt using
+            three steps:
+            <ul>
+              <li>Enable General Interrupt</li>
+              <li>Enable Pereferal Interrupt</li>
+              <li>Enable Flag</li>
+            </ul>
+          </li>
+          <li>So we enabled the Global Interrupt (General Interrupt)</li>
+        </ul>
+        <p>
+          Then we need to determine the trigger of the interrupt which means
+          when will the interrupt start firing or at which signal exactly there
+          are four main treiggers to any interrupt which are the defined phases
+          of any signal.
+        </p>
+        <ul>
+          <li><b>Signal Rising</b></li>
+          <li><b>Signal Falling</b></li>
+          <li><b>Signal Low</b></li>
+          <li><b>After any Logical change</b></li>
+        </ul>
+        <p>
+          That is the main Idea of the macros we are gonna create now in
+          <b><em>EXT_INT.h</em></b> File. <br />
+          so LETS CODE <em>EXT_INT.h</em>!!!!
+        </p>
+        <pre>
+          <code>
+            #include "MCU.h"
+            #include "BIT_Math.h"
+            #include "STD.h"
+            #include "EXT_INT_Config.h"
+
+            #define		GLOBAL_INTERRUPT_ENABLE			0
+            #define		GLOBAL_INTERRUPT_DISABLE		1
+
+            //From DataSheet get the values of registers to write it in cfile
+            #define		TRIGGER_RISING							0
+            #define		TRIGGER_FALLING							1				
+            #define		TRIGGER_LOW_LEVEL						2				
+            #define		TRIGGER_ANY_LOGICAL_CHANGE                                      3
+
+
+            void Set_GlobalInterrupt(void);
+
+            void External_INT0_Init (void);
+            void External_INT1_Init (void);
+            void External_INT2_Init (void);				
+          </code>
+        </pre>
+        <p>
+          Let's talk about the recall functions we created and discuss what they
+          do:
+        </p>
+        <ul>
+          <li>
+            <b>void Set_GlobalInterrupt(void)</b>: This is a function to
+            intialize the global interrupt and this is controlled by
+            <b>SREG 7th bit</b> if set to <b>1</b> then the Global interrupt is
+            enabled and if set to <b>0</b> then the Global Interrupt will be
+            disabled.
+          </li>
+          <li>
+            <b>void External_INT#_Init (void)</b>: is to enable the Flag and
+            define the Trigger
+          </li>
+          <ul>
+            <li>
+              INT0 & INT1 are exactly the same where the register controlling
+              the Triggeres of it is the <b>MCUCR</b> and the exact bits for
+              each of them is demonstrated inside the data sheet, while the
+              register controlling the Flag is <b>GICR</b> and still the bit is
+              defined in the data sheet depending on the number of interrupt
+              (INT1,INT0)
+            </li>
+            <li>
+              INT2 triggers are controlled using <b>MCUSR</b> and the flag using
+              the <b>GICR</b> as the other interrupts
+            </li>
+          </ul>
+        </ul>
+        <p>LETS CODE!!! <em>EXT_INT.c</em></p>
+        <pre>
+          <code>
+            #include "EXT_INT.h"
+
+            void Set_GlobalInterrupt(void)
+            {
+              #if		GLOBAL_INTERRUPT		==		GLOBAL_INTERRUPT_ENABLE	
+                SET_BIT(SREG, 7);
+              
+              #elif	GLOBAL_INTERRUPT		==		GLOBAL_INTERRUPT_DISABLE	
+                CLR_BIT(SREG, 7);
+
+              #endif
+            }
+
+            void External_INT0_Init (void)
+            {	
+              /*General Interrupt Enable*/
+              Set_GlobalInterrupt();
+
+              /*Interrupt FLAG Enable INT0*/
+              SET_BIT(GICR,6);
+              
+                
+              #if		EXTERNAL_INT0_TRIGGER		==		TRIGGER_RISING
+                SET_BIT(MCUCR,0);
+                SET_BIT(MCUCR,1);
+                
+              #elif	EXTERNAL_INT0_TRIGGER		==		TRIGGER_FALLING
+                CLR_BIT(MCUCR,0);
+                SET_BIT(MCUCR,1);
+              
+              #elif	EXTERNAL_INT0_TRIGGER		==		TRIGGER_LOW_LEVEL	
+                CLR_BIT(MCUCR,0);
+                CLR_BIT(MCUCR,1);
+                
+              #elif	EXTERNAL_INT0_TRIGGER		==		TRIGGER_ANY_LOGICAL_CHANGE
+                SET_BIT(MCUCR,0);
+                CLR_BIT(MCUCR,1);
+                
+            #endif
+            }
+
+            void External_INT1_Init (void)
+            {
+              Set_GlobalInterrupt();
+
+              /*Interrupt FLAG Enable INT1*/
+              SET_BIT(GICR,7);
+              
+              
+              #if		EXTERNAL_INT0_TRIGGER		==		TRIGGER_RISING
+                SET_BIT(MCUCR,2);
+                SET_BIT(MCUCR,3);
+              
+              #elif	EXTERNAL_INT0_TRIGGER		==		TRIGGER_FALLING
+                CLR_BIT(MCUCR,2);
+                SET_BIT(MCUCR,3);
+              
+              #elif	EXTERNAL_INT0_TRIGGER		==		TRIGGER_LOW_LEVEL
+                CLR_BIT(MCUCR,2);
+                CLR_BIT(MCUCR,3);
+              
+              #elif	EXTERNAL_INT0_TRIGGER		==		TRIGGER_ANY_LOGICAL_CHANGE
+                SET_BIT(MCUCR,2);
+                CLR_BIT(MCUCR,3);
+              
+              #endif
+            }
+            void External_INT2_Init (void)
+            {
+              CLR_BIT(GICR,5);
+              /*General Interrupt Enable*/
+              Set_GlobalInterrupt();
+
+              /*Interrupt FLAG Enable INT2*/
+              SET_BIT(GICR,5);
+              
+              
+              #if		EXTERNAL_INT0_TRIGGER		==		TRIGGER_RISING
+              SET_BIT(MCUSR,6);
+              
+              
+              #elif	EXTERNAL_INT0_TRIGGER		==		TRIGGER_FALLING
+              CLR_BIT(MCUSR,6);
+              
+              
+              #endif
+            }
+          </code>
+        </pre>
       </main>
     </section>
   </body>
