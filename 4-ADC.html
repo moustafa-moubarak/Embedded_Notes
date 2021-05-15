@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analog to Digital Converter</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <section>
+      <header>
+        <h1>Analog To Digital Converter</h1>
+        <p>
+          Any Processing-unit deals with a digital Signal (0 or 1), yet any
+          sensor reads an analog Signal(from -3V to -25V will be 0) and (from
+          +3V to +25V will be 1), yet our Micro-Controller can only deal with
+          maximum of 5V, so what we will learn in this ssection is how to deal
+          with an analog Signal to become a digital signal the controller can
+          deal with.
+        </p>
+      </header>
+      <h2>Important Concepts & Notes</h2>
+      <ul>
+        <li>
+          An <b>Analog Signal</b> is a <b>Continous Signal</b>, yet the
+          <b>Digital Signal</b> is a <b>Discreet Signal</b>.
+        </li>
+        <li>
+          To Begin with we need to understand how things work, the
+          sensor(Transeducer) takes an analog reading and we need to change this
+          reading to a digital Signal.
+        </li>
+        <p>
+          Each Transeducer got its own voltage range so what if the case is that
+          the voltage range of the sensor is greater that 5v or lets generalize
+          it and say its out of the microController range!?? <br />
+          The answer would be
+          <b>Voltage Devider Circuit</b>, where we can devide it to a certain
+          number to be in range of the Micro-Controller, but then we need to
+          calibrate the output back again by multiplying the voltage back again
+          to its original value.
+        </p>
+        <li>
+          Each ADC is defined by its own <b>Resolution</b>, which is the
+          accuracy of the ADC and is measured by the maximum number of bits it
+          can measure(8bit, 10bit, 12bit,...24bit)
+        </li>
+        <li>
+          The ADC working mechanism is called <b>hold and sample</b> where there
+          is an internal circuit that takes discreet readings samples from the
+          Transeducer.
+        </li>
+        <li>
+          Step size is what merges all the concepts we just introduced together
+          where its defined by this equation: <br />
+          Step-Size = (V<sub>ref</sub>/10<sup>Resolution</sup>)
+          <ul>
+            <li>
+              V<sub>ref</sub> is the maximum voltage the ADC can take in our
+              case is 5V
+            </li>
+            <li>
+              The only Variable in this equation is the V<sub>ref</sub> where
+              the resolution is constant by the vendor of the ADC
+            </li>
+            <li>There are three resources of V<sub>ref</sub>:</li>
+            <ul>
+              <li>AVCC: which is 5V</li>
+              <li>
+                AV<sub>ref</sub>: which can be connected by an external source
+                and controll the voltage supllied to the ADC.
+              </li>
+              <li>
+                Internal: which is 2.56V and its a constant value f
+                Micro-Controller
+              </li>
+            </ul>
+          </ul>
+        </li>
+        <li>
+          I believe you are starting to understand, where as the resolution
+          increases the stepsize will decrease and consequently the accuracy
+          will increase.
+        </li>
+        <li>
+          Another definition to the Step-Size is the step between the discreet
+          values of the sampling and holding of the ADC.
+        </li>
+        <li>
+          If a value is read between the step-size <b>Quantization</b> happens
+          where it reads the lower value, again lets give an example where value
+          of step size is 2.5mv and the reading before was 2mv but the reading
+          after was 4mv so the voltage reading of the second one will be 2 still
+          because of the quantization. and therfore the resolution is what
+          controls the accuracy.
+        </li>
+        <p>Now lets discuss the Hardware mechanism of the ADC</p>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Sucessive Aproximation Register (SAR)</h2>
+      <h3>Working Mechanism</h3>
+      <ol>
+        <li>SAR is an 8-bit Register and its intial value is 0</li>
+        <li>
+          A V<sub>in</sub> enters the ADC which is the value we need to change
+          into a digital value.
+        </li>
+        <li>
+          The comparator starts to compare the D<sub>out</sub> with the V<sub
+            >in</sub
+          >
+          <ul>
+            <li>D<sub>out</sub> = (V<sub>in</sub>/StepSize)</li>
+          </ul>
+        </li>
+        <li>
+          If D<sub>out</sub> <= V<sub>in</sub> a signal is sent by the
+          controller to the SAR to keep the value of one in the current bit.
+        </li>
+        <li>
+          The Digital to Analog Converter changes the value in the SAR to an
+          analog Voltage by the same equation to get D<sub>out</sub>
+        </li>
+        <li>Repeat the same process until the V<sub>in</sub> is reached</li>
+        <li>Then the Value is sent as the output of the ADC</li>
+        <ul>
+          Note:
+          <br />
+          <li>
+            The SAR doesn't stop when the value of D<sub>out</sub> and V<sub
+              >in</sub
+            >
+            are equal it keeps on working till it compares all the SAR bits.
+          </li>
+          <li>
+            The Recommended Range of frequency for the ADC to work effectively
+            is 50kHz : 200kHz
+          </li>
+        </ul>
+      </ol>
+      <figure><img src="pics/SAR.JPG" alt="SAR" /></figure>
+      <h3>
+        How To make the ADC to work in the recommended range of frequency while
+        we do have a constant clock??
+      </h3>
+      <p>
+        The Answer is using a <b>Prescalar</b> connected to a
+        <b>Multiplixer</b>. <br />
+        The Multiplixer selects from the Prescalar the desired frequency. <br />
+        Check the Image Below:
+      </p>
+      <figure>
+        <img src="pics/Pre-Scaler1.JPG" alt="Prescalar1" />
+      </figure>
+    </section>
+
+    <section>
+      <h3>Let's implement the concepts we discussed on our ATMEGA32...</h3>
+      <ul>
+        <li>
+          The resolution of the ADC register in ATMEGA32 is 10bit
+          <p>
+            (yet the registers of ATMEGA32 is only 8-bit so lets discuss how to
+            manage such a case...)
+          </p>
+          <ul>
+            <li>
+              we will use two 8-bit registers the first one will have 8-bits
+              from the 10bits <b><em>ADC-High</em></b> and the remaining two
+              bits will go to the second register <b><em>ADC-Low</em></b
+              >.
+            </li>
+            <li>
+              It can be managed as left adjust or right adjust lets discuss what
+              this means using an example.
+            </li>
+            <p>we want to store this value <b>00110110 01</b></p>
+            <ol>
+              <li><b>ADCH = 00110110</b></li>
+              <li><b>ADCL = 01000000</b></li>
+              <li>ADCH << 2 = 0011011000</li>
+              <li>ADCL >> 6 = 00000001</li>
+              <li>ADCH | ADCL = 0011011001</li>
+              <p>
+                We need to create a Pointer of 16bit to read 2bytes together
+                using right adjust we will discuss this after writing the code
+              </p>
+            </ol>
+          </ul>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Finally Lets CODE!!!!</h3>
+      <h4>Micro Controller Abstraction Layer(MCAL)</h4>
+      <h5>Lets Update <b>MCU.h</b></h5>
+      <pre>
+          <code>
+            /****************** ADC REG ******************/
+
+            #define		ADMUX		(*(volatile uint8*)(0x27))
+            #define		ADCSRA		(*(volatile uint8*)(0x26))
+            #define		SFIOR		(*(volatile uint8*)(0x50))
+            #define		ADCH		(*(volatile uint8*)(0x25))
+            #define		ADCL		(*(volatile uint8*)(0x24))
+            #define		ADC_FINAL	(*(volatile uint16*)(0x24))   
+          </code>
+      </pre>
+      <aside>
+        <p>
+          We defined the registers of ADCH(uint 8) and ADC_Low(uint 8) and
+          overwritten a new register called "ADC_FINAL" starting from the same
+          adress of ADCL of (uint 16), This means that ADC_Final will overwrite
+          ADCL and ADCH to implement the resolution of 10bits as we discussed
+          before.
+        </p>
+      </aside>
+      <h6>Lets Make our <b>ADC_MCAL_Config file</b></h6>
+      <pre>
+        <code>
+          #define			ADC_VOLTAGE_REF			 	        ADC_VREF_AVCC
+
+          #define			ADC_ADJUST					ADC_RIGHT_ADJUST
+
+          #define			ADC_CHANNEL					ADC_CHANNEL_1
+
+          #define			ADC_CONVERSION_TRIGGER		                ADC_AUTO_TRIGGER
+
+          #define			ADC_PRESCALER			          	ADC_PRESCALER_128
+
+          #define			ADC_INTERRUPT_STATUS	                	ADC_INERRUPT_DISABLE
+        </code>
+      </pre>
+      <aside>
+        <p>
+          These are the only configurations that can be changed along the
+          module.
+        </p>
+      </aside>
+      <h6>
+        Lets Create <b>ADC_MCAL.h</b> which will include all the options we can
+        change the config file to, and the functions prototypes.
+      </h6>
+      <pre>
+        <code>
+          #include "MCU.h"
+          #include "BIT_Math.h"
+          #include "ADC_config_MCAL.h"
+
+          #define ADC_VREF_AVCC			0
+          #define ADC_VREF_AREF			1
+          #define ADC_VREF_INTERNAL		2	
+
+          #define ADC_LEFT_ADJUST		0
+          #define ADC_RIGHT_ADJUST		1
+
+          #define ADC_CHANNEL_0			0
+          #define ADC_CHANNEL_1			1
+          #define ADC_CHANNEL_2			2
+          #define ADC_CHANNEL_3			3
+          #define ADC_CHANNEL_4			4
+          #define ADC_CHANNEL_5			5
+          #define ADC_CHANNEL_6			6
+          #define ADC_CHANNEL_7			7
+
+          #define ADC_AUTO_TRIGGER		1
+
+          #define ADC_PRESCALER_CLK		0
+          #define ADC_PRESCALER_2		1
+          #define ADC_PRESCALER_4		2
+          #define ADC_PRESCALER_8		3
+          #define ADC_PRESCALER_16		4
+          #define ADC_PRESCALER_32		5
+          #define ADC_PRESCALER_64		6
+          #define ADC_PRESCALER_128		7
+
+
+          #define ADC_INERRUPT_DISABLE      	0
+          #define ADC_INERRUPT_ENABLE		1
+
+          //Functions
+          void ADC_Init(void);
+
+          void ADC_Read(uint16* value);
+        </code>
+      </pre>
+      <h5>LAst but not least lets Code ADC_MCAL.c</h5>
+      <aside>
+        <p>
+          To Initialize the ADC we will need to work with 3 registers
+          <b>ADCMUX</b>, <b>ADCSRA</b> and <b>SFIOR</b>
+        </p>
+      </aside>
+      <pre>
+        <code>
+          //To define the Voltage Refrence
+          #include "ADC_MCAL.h"
+
+          void ADC_Init(void)
+          {
+            #if		ADC_VOLTAGE_REF			==			ADC_VREF_AVCC
+            SET_BIT(ADMUX, 6);
+            CLR_BIT(ADMUX, 7);
+            
+            #elif	ADC_VOLTAGE_REF			==			ADC_VREF_AREF
+            CLR_BIT(ADMUX, 6);
+            CLR_BIT(ADMUX, 7);
+            
+            #elif	ADC_VOLTAGE_REF			==			ADC_VREF_INTERNAL
+            SET_BIT(ADMUX, 6);
+            SET_BIT(ADMUX, 7);
+            #endif
+        </code>
+      </pre>
+      <aside>
+        <figure>
+          <img src="Pics/ADCMUX-reg.png" alt="ADCMUX-reg" />
+          <img
+            src="Pics/VoltageRefrence-reg-values.png"
+            alt="VoltageRefrence"
+          />
+        </figure>
+        <p>Now lets continue our intialize function</p>
+      </aside>
+      <pre>
+        <code>
+          //To Define the Type of Adjust
+          #if		ADC_ADJUST			==			ADC_RIGHT_ADJUST
+          CLR_BIT(ADMUX, 5);
+          
+          #elif	ADC_ADJUST				==			ADC_LEFT_ADJUST
+          SET_BIT(ADMUX, 5);
+          #endif
+        </code>
+      </pre>
+      <aside>
+        <figure>
+          <img src="pics/Adjust-reg-values.png" alt="Adjust-reg" />
+        </figure>
+        <p>Lets define the Channels</p>
+      </aside>
+      <pre>
+        <code>
+          #if	ADC_CHANNEL		        	==			ADC_CHANNEL_1
+          SET_BIT(ADMUX, 0);
+          
+          #elif	ADC_CHANNEL				==			ADC_CHANNEL_2
+          SET_BIT(ADMUX, 1);
+          
+          #elif	ADC_CHANNEL				==			ADC_CHANNEL_3
+          SET_BIT(ADMUX, 1);
+          SET_BIT(ADMUX, 2);
+        
+          #elif	ADC_CHANNEL				==			ADC_CHANNEL_4
+          SET_BIT(ADMUX, 2);
+          
+          #elif	ADC_CHANNEL				==			ADC_CHANNEL_5
+          SET_BIT(ADMUX, 0);
+          SET_BIT(ADMUX, 2);
+          
+          #elif	ADC_CHANNEL				==			ADC_CHANNEL_6
+          SET_BIT(ADMUX, 1);
+          SET_BIT(ADMUX, 2);
+          
+          #elif	ADC_CHANNEL				==			ADC_CHANNEL_7
+          SET_BIT(ADMUX, 0);
+          SET_BIT(ADMUX, 1);
+          SET_BIT(ADMUX, 2);
+        
+          #endif
+        </code>
+      </pre>
+      <aside>
+        <figure>
+          <img src="Pics/channels_reg_values.png" alt="channels_reg" />
+        </figure>
+        <p>Now Lets see the ADC_Conversion Trigger</p>
+      </aside>
+      <pre>
+        <code>  
+          #if	ADC_CONVERSION_TRIGGER      	==			ADC_AUTO_TRIGGER
+          SET_BIT(ADCSRA, 5);
+          
+          #endif
+        </code>
+      </pre>
+      <aside>
+        <figure>
+          <img src="Pics/ADCSRA_REG.png" alt="ADCSRA_REG" />
+          <img src="Pics/SFIOR_REG_Trigger.png" alt="SFIOR_REG_Trigger" />
+          <p>
+            Yet the Default is auto Trigger since the SFIOR default values is
+            zeros thats why we didn't need to change anything in the SFIOR Reg.
+            <br />
+            Therfore we just changed the 5<sup>th</sup> bit (<em>ADATE</em>) in
+            ADCSRA to one.
+          </p>
+        </figure>
+        <p>Lets go through the PreScalar intialization.</p>
+      </aside>
+      <pre>
+        <code>
+          #if		ADC_PRESCALER			==			ADC_PRESCALER_2
+          SET_BIT(ADCSRA, 0);
+          
+          #elif		ADC_PRESCALER		==			ADC_PRESCALER_4
+          SET_BIT(ADCSRA, 1);
+          
+          #elif		ADC_PRESCALER		==			ADC_PRESCALER_8
+          SET_BIT(ADCSRA, 0);
+          SET_BIT(ADCSRA, 1);
+          
+          #elif		ADC_PRESCALER		==			ADC_PRESCALER_16
+          SET_BIT(ADCSRA, 2);
+          
+          #elif		ADC_PRESCALER		==			ADC_PRESCALER_32
+          SET_BIT(ADCSRA, 2);
+          SET_BIT(ADCSRA, 0);	
+          
+          #elif		ADC_PRESCALER		==			ADC_PRESCALER_64
+          SET_BIT(ADCSRA, 2);
+          SET_BIT(ADCSRA, 1);
+          
+          #elif		ADC_PRESCALER		==			ADC_PRESCALER_128
+          SET_BIT(ADCSRA, 2);
+          SET_BIT(ADCSRA, 1);
+          SET_BIT(ADCSRA, 0);
+          
+          #endif
+        </code>
+      </pre>
+      <aside>
+        <figure>
+          <img src="Pics/ADCSRA_REG.png" alt="ADCSRA_REG" />
+          <img src="pics/ADC_Prescalar.png" alt="ADC_Prescalar" />
+        </figure>
+        <p>
+          We will use the polling method so we need to make sure that the
+          interrupt is disabled.
+        </p>
+      </aside>
+      <pre>
+        <code>
+          #if			ADC_INTERRUPT_STATUS	==			ADC_INERRUPT_ENABLE
+          SET_BIT(ADCSRA, 3);
+          
+          #elif		    ADC_INTERRUPT_STATUS	==			ADC_INERRUPT_DISABLE
+          CLR_BIT(ADCSRA, 3);
+          #endif
+        </code>
+      </pre>
+      <aside>
+        <figure>
+          <img src="pics/ADC_interrupt_enable.png" alt="ADC_Interrupt_Status" />
+        </figure>
+        <p>Last but not least Lets Enable the ADC</p>
+      </aside>
+      <pre>
+        <code>
+          SET_BIT(ADCSRA, 7);
+          }
+        </code>
+      </pre>
+      <aside>
+        <figure>
+          <img src="Pics/ADC_Enable.png" alt="ADC_Enable" />
+        </figure>
+      </aside>
+      <p>
+        Let code the second Read Function (Don't worry its gonna be easy and
+        small😝)
+      </p>
+      <pre>
+        <code>
+          void ADC_Read(uint16* value)
+          {
+            SET_BIT(ADCSRA, 6);
+            while(GET_BIT(ADCSRA, 4)==0);
+            *value = ADC_FINAL;
+          }
+        </code>
+      </pre>
+      <aside>
+        <p>
+          Okay lets discuss what we just wrote here <br />
+          first lets see what is ADCSRA 1<sup>st</sup>bit says in the data
+          sheet. yet before that let me add the sequance of the
+          <b>Polling Mechanism</b>.
+        </p>
+        <ol>
+          <li>We give a notification to start ocnversion</li>
+          <li>we wait till the flag is raised and its value is cahnged to 1</li>
+          <li>we send the converted voltage by the ADC</li>
+        </ol>
+        <p>
+          Now Let me share with you the datasheet and please try to refer to the
+          code above
+        </p>
+        <figure>
+          <img src="Pics/ADCSRA_REG.png" alt="ADCSRA" />
+          <img src="Pics/ADC_START_CONV.png" alt="ADC start conv" />
+          <img src="Pics/ADC_FLAG.png" alt="ADC flag" />
+        </figure>
+      </aside>
+      <p>
+        Congratulations my Friend we have ended the MCAL of the ADC now what we
+        are gonna do is to emplemented on a temprature sensor(LM35) on the HAL
+        Layer.💃💃💃
+      </p>
+
+    </section>
+  </body>
+</html>
