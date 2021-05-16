@@ -511,7 +511,76 @@
         are gonna do is to emplemented on a temprature sensor(LM35) on the HAL
         Layer.💃💃💃
       </p>
-
     </section>
+
+    <section>
+      <h4>Hardware Abstraction Layer(HAL)</h4>
+      <h5>Lets Create <b>Temp_Sensor.h</b></h5>
+      <p>
+        Where it/s gonna include two functions prototypes only Intialize the
+        Temp Sensor and Reading the values
+      </p>
+      <pre>
+      <code>
+        #include "ADC_MCAL.h"
+
+        void TempSensor_Intit(void);
+        void TempSensor_Read(uint16* val);
+      </code>
+    </pre>
+      <aside>
+        <p>
+          Let's define some equations based on the data sheet of
+          LM35_Temp_Sensor
+        </p>
+        <figure>
+          <img src="Pics/LM35.png" alt="LM35" />
+        </figure>
+        <p>
+          &because; Step-Size = (V<sub>ref</sub>/2<sup>Resolution</sup>) <br />
+          &because; D<sub>out</sub> = V<sub>in</sub>/Step-Size <br />
+          &there4; V<sub>in</sub> = D<sub>out</sub>*V<sub>ref</sub>/2<sup
+            >Resolution</sup
+          >
+          <br />
+          &because; V<sub>ref</sub> = 5 V = 5000 mV <br />
+          &because; Resolution of ATMEGA32 = 10Bit <br />
+          &there4; V<sub>in</sub> = D<sub>out</sub>*5000/1024 <br />
+          &because; 1&#8451; = 10 mv <br />
+          &there4; Newly Calibrated Temprature = (1*V<sub>in</sub>)/10 <br />
+          &there4; Newly Calibrated Temprature = D<sub>out</sub>*500/1024 <br />
+        </p>
+      </aside>
+      <h4>Let's Code <b>Temp_Sensor.c</b></h4>
+      <pre>
+        <code>
+          #include "Temp_Sensor_HAL.h"
+
+          void TempSensor_Intit(void)
+          {
+            ADC_Init();
+          }
+
+          void TempSensor_Read(uint16* val)
+          {
+            uint16 Digital_out = 0;
+            uint32 Vin = 0;
+            uint16 Temp = 0;
+            
+            ADC_Read(&Digital_out);
+            
+            //vin = digital out * step-size
+            //Step-size = Vref/(2^resolution) 
+            
+            Vin = (Digital_out * 5000)/1024;
+            
+            //LM35 Temprature slope is 10mv/degree Celsius
+            Temp = Vin / 10;
+            *val = Temp;
+          }
+        </code>
+      </pre>
+    </section>
+    
   </body>
 </html>
