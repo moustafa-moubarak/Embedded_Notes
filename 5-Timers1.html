@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timer0-Part1-</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Timers</h1>
+    <section>
+      <h2>Introduction</h2>
+      <h3>What is a Timer !!</h3>
+      <p>
+        Timer is a pereferal Like any other pereferal that counts and calculates
+        time without the an interfering with the CPU. <br />
+        We did use before in our code function <em>_delay_ms</em>, what this
+        function does is that the code enters an empty loop which the CPU
+        excutes and gets the CPU stuck at that line of code till the number of
+        seconds ends. <br />
+        Timers work in a a very different concept where when ever it releases
+        the order to count some time the CPU wont be notified this time the CPU
+        will keep on moving forward with the code and whenever the timer
+        finishes counting it notifies the CPU using an interrupt and the ISR
+        (Interrupt Service Routine) starts working after the counting is
+        finished. <br />
+        This part is life changing concept where we can fire everything whenever
+        we want. Put in mind that any event around us is either time based or
+        Event based, either they work in a parallel process or in a series
+        process and by timers we can achieve the parallel process easily and
+        smoothly without affecting our CPU performance.
+      </p>
+      <h3>Mechanism of working</h3>
+      <p>
+        Timers from inside got a basic counter and a flag if we are considering
+        Timer0 inside ATMEGA32 it contains an 8-bit register that counts from 0
+        to 255 and whenever it finishes counting an <b>Overflow Flag</b> is
+        raised and this takes one more count to be raised, so the total counts
+        are 256 and then it overflows starts again from the beginning. <br />
+
+        The time taken for each count is called <b>Tick Time</b>,so let me ask a
+        question here, How much would it take to count 256 Tick?? <br />
+        &because; Crytal Frequency we are using = 16 million Hz <br />
+        &there4; one Tick Time = one Instruction = 1/16M = 0.06&micro;s <br />
+        &there4; 256 Tick Time = 256 * 1/16M = 16&micro;s <br />
+
+        Therfore This means that it take 16&micro;s to make 1 Full Cycle
+        including the Raise of the Timer Flag. <br />
+
+        Now Let me ask you how to achieve a 1ms if the whole cycle takes only
+        16&micro;s?? <br />
+        Its by simply slowing down the Tick-Time and this can be achieved by
+        slowing the down the the Clock frequency and yes, as you guessed it we
+        will use a <b>prescalar</b> .
+        <figure>
+          <img src="Pics/Pre-Scaler1.JPG" alt="Pre-Scaler1" />
+        </figure>
+        &there4; Tick-Time = (prescalar)/(Crystal Frequency) <br />
+        &there4; Overflow-Time = 256*Tick Time <br />
+        I agree with you this did reduce the Time yes but still its defined and
+        not that flexible, thefore there are many modes we can work on one of
+        them is the basic mode or what we call <b>Timers Normal Mode</b>.
+      </p>
+      <h3>Timers Normal Mode</h3>
+      <p>
+        The Normal Mode is based on ending with the number 256 because this is
+        where the flag will be raised. but we never mentioned that we have to
+        start from Zero so lets give an example to know how to calculate the
+        starting point of counting. <br />
+        let us say we want to Achieve 1ms and Crystal is 16 Million Hz <br />
+        &because; Tick-Time = (prescalar)/(Crystal Frequency) = 256/16M = 16
+        &micro;s <br />
+        &Therefore; Number of ticks we need to achieve 1 ms = 1000/16 = 62 ticks
+        <br />
+        &there4; Intial Value to start counting to achieve 1 ms = 256 - 62 = 194
+        <br />
+
+        This means That we need to start counting from tick 194 as an intial
+        value to achieve 1 ms in Normal Mode. <br />
+
+        Now lets discuss another example where we wanna achieve a 100 ms while
+        the Prescalar limit is 1024 <br />
+
+        &because; Tick-Time = (prescalar)/(Crystal Frequency) = 1024/16M = 64
+        &micro;s <br />
+        &there4; we need to know how many overflows we need to achieve that 100
+        ms <br />
+        &there4; num-ovf = 100/16 = 6.25 rotations <br />
+        &there4; we need to know where to start to achieve the 0.25 of the
+        overflow and then add it to 6 overflows <br />
+        &there4; 0.25*256 = 64 tick <br />
+        &there4; Intial Value to start counting to achieve 0.25 of the overflow
+        = 192 <br />
+      </p>
+    </section>
+    <section>
+      <h2>Lets CODE!!!</h2>
+      <p>
+        First thing is First we need to know which layer where we are going to
+        write our code. Timers-Drivers are in the MCAL yet as we dicussed before
+        we are going to use overflow interrupt to raise the flag of conversion,
+        and therfore as per our understanding to external interrupts the
+        Timer-ISR will be written in the main code (Just for now we will discuss
+        this in the next section). So lets get to work...
+      </p>
+      <h3>Update <em>MCU.h</em> to add Timers Registers</h3>
+      <h4>
+        Check "8-bit Timer/Counter Registers Description" Section in DataSheet
+      </h4>
+      <pre>
+          <code>
+            #define		TCCR0		(*(volatile uint8*)(0x53))
+            #define		TCNT0		(*(volatile uint8*)(0x52))
+            #define		OCR0		(*(volatile uint8*)(0x5C))
+            #define		TIMSK		(*(volatile uint8*)(0x59))
+            #define		TIFR		(*(volatile uint8*)(0x58))
+          </code>
+      </pre>
+
+      <h3>Create <em>Timer0_Config.h</em> To make our Driver more generaic</h3>
+      <pre>
+          <code>
+            #define		WAVEFORM_GEN_Mode		Normal
+
+            #define		TIMER0_PRESCALER		TIMER0_PRESCALER_1024
+
+            #define		PRESCALER_FACTOR		1024
+
+            #define		OVF_Ticks				256
+          </code>
+      </pre>
+      <p>So lets detail each Macro...</p>
+      <ul>
+        <li>
+          To begin with The Wave Generation mode is where we select the mode we
+          are going to work on as we defined we are gonna work with the
+          Normal-Mode only for now but will define all the modes in our code for
+          now and in the upcoming sections we will discuss them in details.
+        </li>
+        <li>
+          Selection of Timer0_Prescalar as we explained before the importance of
+          it and it working mechanism.
+        </li>
+        <li>
+          Finaly the PRESCALER_FACTOR and OVF_TICKS are gonna be used as
+          variables in our code.
+        </li>
+      </ul>
+      <h3>Create <em>Timer0.h</em></h3>
+      <pre>
+          <code>
+            #include "BIT_Math.h"
+            #include "MCU.h"
+            #include "Timer_Config.h"
+            #include "EXT_INT.h"
+            
+            #define		Normal				0
+            #define		PWM				1
+            #define		CTC				2
+            #define		FAST_PWM			3
+            
+            #define		TIMER0_NO_PRESCALLING		0
+            #define		TIMER0_PRESCALER_8		1
+            #define		TIMER0_PRESCALER_64		2
+            #define		TIMER0_PRESCALER_256		3
+            #define		TIMER0_PRESCALER_1024		4
+            
+                        
+            
+            void Timer0_Init(void);
+            
+            void Timer0_SetDelay(uint32 Delay_Ms);
+            
+            void Timer0_Start(void);
+            
+            void Timer0_Stop(void);
+          </code>
+      </pre>
+      <p>We will make 4 driving functions..</p>
+      <ul>
+        <li>
+          <b>Timer0_Init</b>
+          <ul>
+            <li>Wave form Generation mode</li>
+            <li>Enable Global Interrupt</li>
+            <li>Enable Pereferal Interrupt(OVF_Interrupt)</li>
+          </ul>
+        </li>
+        <li>
+          <b>Timer0_Start</b>
+          <ul>
+            <li>
+              Will start conversion by setting the registers of the prescalar
+            </li>
+          </ul>
+        </li>
+        <li>
+          <b>Timer0_Stop</b>
+          <ul>
+            <li>Will clear the bits of the prescalar to stop conversion</li>
+          </ul>
+        </li>
+        <li><b>Timer0_SetDelay</b></li>
+        <ul>
+          <li>
+            We will code the equations we discussed above such that this
+            function will take an input in milliseconds.
+          </li>
+        </ul>
+      </ul>
+      <h3>Create <em>Timer0.c</em></h3>
+      <pre>
+          <code>
+            #include "Timer.h"
+
+            uint32	NUM_OVF		= 0;
+            uint8	INIT_VALUE	= 0;
+            
+            void Timer0_Init(void)
+            {
+                #if		WAVEFORM_GEN_Mode		==		Normal
+                    CLR_BIT(TCCR0, 3);
+                    CLR_BIT(TCCR0, 6);
+                
+                #elif	WAVEFORM_GEN_Mode		==		PWM	
+                    SET_BIT(TCCR0, 6);
+                    CLR_BIT(TCCR0, 3);
+                
+                #elif	WAVEFORM_GEN_Mode		==		CTC
+                    SET_BIT(TCCR0, 3);
+                    CLR_BIT(TCCR0, 6);
+                    
+                #elif	WAVEFORM_GEN_Mode		==		FAST_PWM		
+                    SET_BIT(TCCR0, 6);
+                    SET_BIT(TCCR0, 3);
+                #endif	
+                
+                //Enable Global Interrupt
+                Set_GlobalInterrupt();
+                
+                //Enable Overflow Interrupt
+                SET_BIT(TIMSK, 0);
+            }
+          </code>
+      </pre>
+      <aside>
+        <figure>
+          <img src="Pics/TCCR0.JPG" alt="TCCR0" />
+          <img src="pics/Timer0_Wave_Gen_Modes.JPG" alt="WGM" />
+          <img src="Pics/TIMSK.JPG" alt="TIMSK" />
+          <img
+            src="Pics/Timer0_Pereferal_INT_Flag_Bit.JPG"
+            alt="Timer0_INT_Flag"
+          />
+        </figure>
+      </aside>
+      <pre>
+          <code>
+            void Timer0_Start(void)
+            {
+                #if		TIMER0_PRESCALER		==		TIMER0_NO_PRESCALLING
+                SET_BIT(TCCR0, 0);
+                CLR_BIT(TCCR0, 1);
+            
+                #elif	TIMER0_PRESCALER		==		TIMER0_PRESCALER_8
+                SET_BIT(TCCR0, 1);
+                CLR_BIT(TCCR0, 0);
+                
+            
+                #elif	TIMER0_PRESCALER		==		TIMER0_PRESCALER_64
+                SET_BIT(TCCR0, 0);
+                SET_BIT(TCCR0, 1);
+                
+                #elif	TIMER0_PRESCALER		==		TIMER0_PRESCALER_256
+                CLR_BIT(TCCR0, 0);
+                CLR_BIT(TCCR0, 1);
+                SET_BIT(TCCR0, 2);
+                
+                #elif	TIMER0_PRESCALER		==		TIMER0_PRESCALER_1024
+                SET_BIT(TCCR0, 0);
+                CLR_BIT(TCCR0, 1);
+                SET_BIT(TCCR0, 2);
+                
+                #endif	
+            }            
+          </code>
+      </pre>
+      <aside>
+        <figure>
+          <img src="Pics/TCCR0.JPG" alt="TCCR0" />
+          <img src="Pics/Timer0_Prescalar1.JPG" alt="Pre-Scalar1" />
+          <img src="Pics/Timer0_Prescalar2.JPG" alt="Pre-Scalar2" />
+        </figure>
+      </aside>
+      <pre>
+          <code>
+            void Timer0_Stop(void)
+            {
+                CLR_BIT(TCCR0, 0);
+                CLR_BIT(TCCR0, 1);
+                CLR_BIT(TCCR0, 2);
+            }
+          </code>
+      </pre>
+      <pre>
+          <code>
+            void Timer0_SetDelay(uint32 Delay_Ms)
+            {
+                uint8	Tick_Time = (PRESCALER_FACTOR/16);
+                
+                uint32	Total_Ticks = ((Delay_Ms * 1000)/Tick_Time);
+                
+                NUM_OVF = Total_Ticks/OVF_Ticks ;
+                
+                INIT_VALUE = 256 - (Total_Ticks % OVF_Ticks);
+                
+                TCNT0	=	INIT_VALUE;
+                
+                if(INIT_VALUE != 0)
+                {
+                    NUM_OVF++;
+                }   
+            }
+          </code>
+      </pre>
+      <aside>
+        <p>
+          Congrats we are done with the driver lets code in the app
+          layer(main.c) the ISR and don't forget to include the interrupts
+          library which includs the vector table of ATMEGA32. <br />
+        </p>
+      </aside>
+      <h3>Create main.c</h3>
+      <h4>Our app will toggle a led using timer</h4>
+      <pre>
+          <code>
+            #include "Timer.h"
+            #include "LED_HAL.h"
+            #include &#60;avr/interrupt.h>
+            
+            extern uint32	NUM_OVF	;
+            extern uint8	INIT_VALUE;
+            
+            int main(void)
+            {
+                LED0_Init();
+                Timer0_Init();
+                Timer0_SetDelay(2000); 
+                Timer0_Start();
+                while (1) 
+                {
+                }
+            }
+            
+            ISR(TIMER0_OVF_vect)
+            {
+                static uint32 cnt = 0;
+                
+                cnt++;
+                
+                if(cnt == NUM_OVF)
+                {
+                    cnt = 0;
+                    LED0_Toggle();
+                    TCNT0 - INIT_VALUE;
+                }
+                
+            }
+          </code>
+      </pre>
+    </section>
+  </body>
+</html>
