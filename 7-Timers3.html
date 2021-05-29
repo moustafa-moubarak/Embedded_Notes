@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timer0-Part1-</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Pulse Width Modulation</h1>
+
+    <section>
+      <h2>Fast PWM</h2>
+      <p>
+        We Did cover the Fast PWM method in Timers-part2-, where we said that we
+        do have two modes the Normal and inverted so let us put this in the form
+        of equations.
+      </p>
+      <h3>Non-Inverted Mode Fast-PWM</h3>
+      <ul>
+        <li>Duty-Cycle = (OCR + 1)/256</li>
+      </ul>
+      <h3>Inverted Mode Fast-PWM</h3>
+      <ul>
+        <li>Duty-Cycle = (255 - OCR)/256</li>
+      </ul>
+      <aside>
+        <p>
+          Remember that The Duty Cycle is the ration of <b>ON Cyles</b> to the
+          <b>Total Cycles</b>. Yet there is a major draw-Back in those two modes
+          where we can't achieve a full 100% and 0% on the same mode, yet the
+          Major Advantage is that it achieves The highest frequency possible.
+        </p>
+        <ul>
+          <li>
+            Duty-Cycle<sub>non-Inverted</sub> = (0 + 1)/256
+            <ul>
+              <li>So It can't achieve a 0% there will always be fractions</li>
+            </ul>
+          </li>
+          <li>
+            Duty-Cycle<sub>Inverted</sub> = (255 - 0)/256
+            <ul>
+              <li>So It can't achieve a 100%</li>
+            </ul>
+          </li>
+        </ul>
+        <p>
+          This demonstrations means that we can achieve only one either 100% or
+          0% on the same Pin
+        </p>
+        <p>Now Lets look into the Frequency of the wave Generated Equation</p>
+        <ul>
+          <li>
+            f<sub>Generated Wave</sub> = (f<sub>Occilator</sub> = ((PreScalar) x
+            Top) +1)
+          </li>
+        </ul>
+        <p>
+          As the Frequency of Occilator increases the frequency of Generated
+          wave increases just put this in mind till explaining the
+          Phase-Correct.
+        </p>
+      </aside>
+    </section>
+
+    <section>
+      <h2>Phase-Correct</h2>
+      <p>
+        So here is the difference in the wave where the counter TCNT start
+        counting up till reaching the Top and then starts to count back down,
+        such that the cycle will be doubled. now imagine puting a value in the
+        OCR of 100 How many times will the OCR cut the Wave?? <br />
+        Yes you are right, it will intesect two times one while the counter is
+        going up and once while going down. <br />
+        So the Lets assume that the wave is starting with a high pulse and when
+        reaching OCR value will turn low then will start counting down and will
+        intersect the OCR value again so will turn up high again and continue
+        till the TCNT reaches a zero. Yet one draw-back here is that the
+        frequency is halfed cuz the time taken to make one wave is doubled.
+        <br />
+        so if you are wondering why we need this mode, ofc it's to simply deal
+        with the problem of the Zero and full load, let us demonstrate how
+        through the equations.
+      </p>
+      <ul>
+        <li>
+          Duty-Cycle = (2 x OCR)/(2 x Top) = (OCR)/(Top)
+          <ul>
+            <li>
+              We can Now put either a Zero or the Top value inside the OCR and a
+              0% or 100% can eaisly be implemented. <br />
+              This can assure that Accuracy of the Phase-Correct Mode.
+            </li>
+          </ul>
+        </li>
+        <li>
+          f<sub>Generated Wave</sub> = (f<sub>Occilator</sub> / ((PreScalar) x
+          Top))
+        </li>
+        <p>f<sub>Generated Wave</sub> is halfed because the Top is doubled</p>
+      </ul>
+      <p>
+        So lets generalize the concept, where if we wanna achieve the highest
+        Frequency(speed for example) we need to use the <b>Fast PWM</b> while if
+        we need a high Accuracy from the wave we will use <b>Phase-Correct</b>.
+      </p>
+    </section>
+
+    <section>
+      <h2>DC-Motor Driver</h2>
+      <h3>H-Bridge</h3>
+      <p>
+        Okay let's now talk about a new component that will help us control the
+        DC-Motor and its called <b>H-Bridge</b>.
+        <figure>
+          <img src="Pics/H-Bridge-IC.JPG" alt="H-Bridge_IC" />
+        </figure>
+        Lets discuss the List of pins available on this PCB of H-Brdige I do
+        have currently and whithin we will understand the mechanism of each pin.
+      </p>
+      <ul>
+        <li>The lower volt and grnd are the ones powering the IC.</li>
+        <li>
+          The Volt and ground on top are the ones powering the Motor, of which
+          the IC will control.
+        </li>
+        <li>
+          Then we have EnableA which we connect to the Pin getting the output
+          from ATMEGA32 and we will work on Timer0 so it will be connected to
+          OC0(PB3).
+        </li>
+        <li>
+          Then we have pin1 Pin2 and those control the direction of the motor
+          where whenever pin1 gets a High pulse and Pin2 gets a Low the motor
+          moves Clockwise and vise-versa.
+        </li>
+        <li>EnableB, Pin3 and Pin4 are the same as EnableA, Pin1 and Pin2</li>
+      </ul>
+      <figure>
+        <p>Now let me demonstrate the Simple H-Bridge Circuit</p>
+        <img src="Pics/H-Bridge-Circuit.JPG" alt="Circuit_H" />
+      </figure>
+      <p>
+        I believe Now we can code our H-Bridge IC to control the Direction of
+        the motor
+      </p>
+    </section>
+
+    <section>
+      <h2>Servo-Motor</h2>
+      <p>
+        A Servo-Motor is a motor that moves with defined angles and for it to
+        work it contains a programmable IC which will discuss in details in this
+        section.
+      </p>
+      <h4>
+        The Frequency needed For the Servo-Motor is 50Hz so how can we generate
+        a wave from the PWM that matches 50Hz!!!
+      </h4>
+      <p>
+        let me remind You with the Frequency of generated wave equation first in
+        PWM which we concluded upwards.
+      </p>
+      <ul>
+        <li>
+          f<sub>Generated Wave</sub> = (f<sub>Occilator</sub> / ((PreScalar) x
+          Top))
+        </li>
+      </ul>
+      <p>Knowing That:</p>
+      <ul>
+        <li>f<sub>Occilator</sub>: based on our crystal is 16,000,000 Hz</li>
+        <li>PreScalar: Lets use the Highest which is 1024</li>
+        <li>Top: If we are using Fast-PWM 256</li>
+      </ul>
+      <p>
+        &there4; f<sub>Generated Wave</sub> = 61 Hz <br />
+        So whatever Duty-Cycle is sent, would be an invalid input to the IC of
+        the Servo so we need to lower it more and the only variable we can
+        control now, after maximizing the Prescalar, is the <b>TOP</b> so let me
+        introduce you to a new register called <b>ICR</b> and this is a register
+        that we can store in the Top value needed to generate the desired
+        frequency as needed. <br />
+        <b
+          >Yet Remember that the Register OCR is still of usage where we store
+          in it the value of the Duty-Cycle Desired.
+        </b>
+      </p>
+      <ul>
+        <li>Duty-Cycle = (OCR + 1)/256</li>
+      </ul>
+    </section>
+  </body>
+</html>
