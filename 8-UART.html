@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timer0-Part1-</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Communication Protocols</h1>
+
+    <section>
+      <h2>Parallel</h2>
+      <p>
+        Parallel connection means that we will send all the bits at once each on
+        a single wire and there are some Advantages and disadvantages for this
+        kind of communication so lets discuss them:
+      </p>
+      <ul>
+        <li>Advantage</li>
+        <ul>
+          <li>
+            <b>Highest speed</b>: that is because we send a big number of bits
+            at the same time
+          </li>
+        </ul>
+        <li>DisAdvantages</li>
+        <ul>
+          <li>
+            <b>Complex Connection</b>: we need alot of DI/O pins which will be
+            wasted to connect two micro controllers together like if we are
+            transfering 8-bits register we need to reserve 8 pins on each micro
+            controller to achieve transfering the values in this register.
+          </li>
+          <li>
+            <b>Noise</b>: Each wire will create a mangetic field around it and
+            this may cause noise and change a value in a wire by accident.
+          </li>
+          <li>
+            <b>Timer-Scew</b>: This means that not all the charges reach its
+            destination at the same time as we discussed in the LCD for example
+            where we need to wait for all the pulses to reach its destination
+            first and then give a pulse for them to enter the register to make
+            sure they sll enter at once.
+          </li>
+        </ul>
+      </ul>
+      <h3>Usage</h3>
+      <ul>
+        <li>
+          Parallel connection Mainly used Inside the pereferalls registers
+          interfacing with micocontroller.
+        </li>
+        <li>
+          Also as a Special case parallel connection is used by HD-cameras and
+          was patent for STM32 micro controller owners, and this came from the
+          need of transferring millions of bits at the same time released by the
+          camera.
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Serial Communication</h2>
+      <p>
+        So now that we have introduced the parallel connection let us detail
+        different Types of Serial connections. <br />
+        Serial communication in general means that we are transfering each bit
+        in one clock-pulse.
+      </p>
+      <h3>Types of Serial Communications</h3>
+      <ul>
+        <li>Wired/Wireless</li>
+        <li>Sender/Reciever Based</li>
+        <ul>
+          <li>
+            <b>Simplex</b>: where each micro controller is fixed to one role
+            either as a sender or a reciever this means that one of them will
+            always be the sender and the other is always going to be the
+            Reciever.
+          </li>
+          <li>
+            <b>Half-Duplex</b>: Where when a micocontroller is sending the other
+            will act as a reciever and vice-versa. This means that both can now
+            work as a sender and a reciever but not in the same time
+          </li>
+          <li>
+            <b>Full-Duplex</b>: Where both can work as senders and recievers at
+            the same time
+          </li>
+        </ul>
+        <li>synchronization</li>
+        <ul>
+          <li>
+            <b>Synchronous</b>: This means that between each micocontroller a
+            shared CLK, so imagine having a controller with a crystal of 8MHz
+            and another controller with 16MHz and we need to send data between
+            both, therfore we will connect a shared CLK wire with a prescaler to
+            allow both send and recieve all the data. such as SPI and I2C <br />
+            Also we Got LIN which is a more complex type of Synchronous and we
+            will discuss it in details when we get into the automotive bus tech
+            but for now it doesn't share a clock and yet considered synchornous
+            type.
+          </li>
+          <li>
+            <b>Asynchronous</b>: No Shared clock yet we can set the Frequency of
+            this pereferal manually on both sides. so let us say that we will
+            set manually the UART Pereferal using a prescalar on both micro
+            Controllers to 10KHz this means that we will send 10Kbits/sec and
+            this is called <b>Bit-Rate</b> <br />
+            yet there is another unit we do use in the industry yother than the
+            bit rate and it is called <b>Baud-Rate</b> <br />
+            <b>Baud-Rate</b>: is Symbol/sec and the symbol is dependent on
+            different standards where symbol in manchester is 3 bits for example
+            and the Baud-Rate is 10KSymbol/sec this means 30KBit/sec.
+          </li>
+        </ul>
+        <li>Connection Types</li>
+        <ul>
+          <li>
+            <b>Peer To Peer</b>: Communication between two Micro Controllers
+            where both can intiate sending or recieving the data between them.
+          </li>
+          <li>
+            <b>Single Master Multi Slave</b>: This is what defines a master
+          </li>
+          <ul>
+            <li>
+              <b>Intiator</b> to Sending and recieving the data from the slaves
+            </li>
+            <li>defines <b>CLK</b> for all its slaves</li>
+          </ul>
+          <li>
+            <b>Multi Master Multi Slaves</b> and we will discuss this later in
+            I2C and CAN.
+          </li>
+        </ul>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Universal Asynchronous Reciever Transmitter-<b>UART</b>-</h2>
+      <h3>UART Properties</h3>
+      <ul>
+        <li>Wired</li>
+        <li>Asynchronous</li>
+        <li>Full-Duplex</li>
+        <li>Peer to Peer</li>
+      </ul>
+      <h3>HeadPoints</h3>
+      <ul>
+        <li>
+          Bluetooth Module for example works using UART communication Protocol.
+        </li>
+
+        <li>The Two pins used are T<sub>x</sub> and R<sub>x</sub></li>
+        <li>
+          The UART Can work as Synchronous its just an extra option available in
+          UART
+        </li>
+        <li>UART is a tech developed on a standard of RS232 or RS485</li>
+        <h4><b>RS232</b></h4>
+        <ul>
+          <li>Peer To Peer</li>
+          <li>Full-Duplex</li>
+        </ul>
+        <h4><b>RS485</b></h4>
+        <ul>
+          <li>Single Master Multi Slave</li>
+          <li>Half-Duplex</li>
+        </ul>
+      </ul>
+      <h3>USB TTL Module</h3>
+      <p>
+        The Computers voltage range is for logic 1 is rom -3V to -25V and Logic
+        0 form 3V to 25V while micocontroller Logic1 is 5V and Logic0 is 0V and
+        this indicates the Big Voltage difference level between both and
+        therfore we needed to convert this voltage to transistor level so they
+        can interface together so inside the USB TTL Module a Microchip called
+        MAX232 Convertor which changes the USB Voltage Level to
+        <b>Transistor to Transistor Level</b> and there comes the Name of TTL
+      </p>
+    </section>
+
+    <section>
+      <h2>UART Pereferal</h2>
+      <p>
+        There are two main things to be defined for any communication Protocol
+        First thing is the Frame and secondly the Hardware so let us define the
+        UART Frame.
+      </p>
+      <h3>UART Frame</h3>
+      <ul>
+        <li>
+          <b>Start Bit</b>: which signifies the beginning of the data
+          Transmitted and its normally a 0 bit
+        </li>
+        <li>
+          <b>Data Bits</b>: They need to be between 5-9 bits and they are the
+          Data transmitted itself in our case we will transmit 8 bits.
+        </li>
+        <li>
+          <b>Stopping Bit</b>: They can be defined as a sing High or double High
+          and they are different modes that achieve the same signal to notify
+          the ending of the data transmitted or recieved.
+        </li>
+        <li>
+          <b>Parity Bit</b>: It is one of the simplist error controlling methods
+          where it identifies either the data Even or odd and if so it send a
+          single bit to make the data transmitted is always even or odd so it
+          will either add one to the data bits or a zero to assure the recciever
+          catches an even data and therfore we can identify if there was any
+          issing data due to noise or any other factors.
+        </li>
+      </ul>
+      <h3>UART Hardware</h3>
+      <p>
+        The UART uses a <b>Parsing Method</b> where it samples each bit being
+        sent from 8:16 times to make sure that the pulse it either High or a
+        low. <br />
+        Now let us talk about a new form of prescalar and its mechanism: <br />
+      </p>
+      <figure>
+        <img src="Pics/Pre-Scaler-UART.JPG" alt="PreScalar2" />
+        <ol>
+          <li>So we put a value in the UBRR let us assume we pu a 9</li>
+          <li>
+            There is a counter as demonstrated on the img upwards and this
+            counter counts down till reaching a zero then a flag is raised also
+            it counts with the same speed of the Occilator.
+          </li>
+          <li>
+            So the Total counts are 9(UBRR) and 1 for the flag so a total of 10
+            counts
+          </li>
+          <li>
+            so if we wanna know the amount of pulses transmitted now will be
+            (f<sub>occilator</sub>/(UBRR+1))
+          </li>
+          <li>
+            Not lets fllow up with the Block diagram upwards so
+            (f<sub>occilator</sub>/2(UBRR+1))
+          </li>
+          <li>
+            Again lets fllow up with the Block diagram upwards so
+            (f<sub>occilator</sub>/8(UBRR+1))
+          </li>
+          <li>
+            Finally either you want this amount of pulse so let it got to the
+            multiplixer or devide it one more time and let the ourput be
+            (f<sub>occilator</sub>/16(UBRR+1))
+          </li>
+        </ol>
+      </figure>
+      <p>
+        Let me say that <b>Baud-Rate = (f<sub>occilator</sub>/16(UBRR+1))</b>,
+        where each device-Module needs a determained Baud-Rate to interface with
+        it and is determined in its data-sheet. <br />
+        for example Bluetooth-HC05- Baud-Rate is 9600 and Blutooth-HC06
+        Baud-Rate is 115,200 can't we calculate the UBRR for each one of them!!
+      </p>
+    </section>
+  </body>
+</html>
