@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timer0-Part1-</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Serial Perepheral Interface -SPI-</h1>
+    <section>
+      <h2>SPI Specs</h2>
+      <ul>
+        <li>Wired</li>
+        <li>Serial</li>
+        <li>Full Duplex</li>
+        <li>Synchronous</li>
+        <li>Single Master Multi Slaves</li>
+      </ul>
+      <h2>SPI Pins</h2>
+      <ul>
+        <li><b>MOSI</b>: Master Output Slave Input</li>
+        <li><b>MISO</b>: Master Input Slave Output</li>
+        <li><b>CLK</b>: Share Clock Pin</li>
+        <li><b>SS/CS</b>: Selected Slave/Chip Select</li>
+      </ul>
+      <h2>Basic mechanism Process</h2>
+      <ol>
+        <li>
+          First thing is the selection where the master chooses the Slave its
+          gonna communicate with, through the <b>SS-pin</b> and this happens
+          through sending a 0 pulse to the slave which is translated by the
+          Slave hardware that its currently selected as a readiness sign.
+        </li>
+        <li>
+          Second step is sending the CLK from the Master to the slave such that
+          the slave would understand the speed of communication its gonna send
+          and recieve with.(Synchronous)
+        </li>
+        <li>
+          Now lets discuss the MISO/MOSO Process, We will begin our capture
+          where the Master got a stored value and the slave got a value
+        </li>
+        <ol>
+          <li>
+            The Master send 1-bit and instaneously the slave sends 1-bit and
+            thats why its called <b>Exchange-Process</b>, where both happens at
+            the same time.
+          </li>
+          <li>
+            At the same insident the Master and slave shifts Right by one bit,
+            and that is why those two registers are called <b>Shift REGs</b>
+          </li>
+          <li>
+            All that happens dueto one Pulse from the CLK, and therfore we can
+            conclude that the Full registers will exchange their values in
+            8-CLK-Pulses.
+          </li>
+        </ol>
+      </ol>
+      <h2>SS/CS Connection Types</h2>
+      <ul>
+        <li>Normal Connection</li>
+        <li>Daisy Chain</li>
+      </ul>
+      <h3>Normal Connection</h3>
+      <figure>
+        <img src="Pics/SPI_Normal_Connection.png" alt="SPI_NC" />
+      </figure>
+      <p>
+        So as we said previously that the SS Pin needs to signify a zero bit to
+        the Selected Slave so can't we replace that 0 bit with any DIO-Pin to
+        send the zero to Multiple slaves!! and thats the fastest connection as
+        we discussed where all is needed one 8 pulses to transfere the data.
+      </p>
+      <h3>Daisy Chain</h3>
+      <figure>
+        <img src="Pics/SPI_Daisy-Chain.png" alt="SPI_DC" />
+      </figure>
+      <p>
+        However What about if we have 10/20/30 slaves The master wanna
+        communicate with!! <br />
+        So its decided to make another type of connection called daisy chain
+        where the master communicates with first slave and each slave
+        communicates with other slaves and therfore if the we need S1-Data it
+        will need to pass through S2 the S3 and finally till it reaches the
+        Master.
+      </p>
+      <h4>Advantage Daisy-Chain</h4>
+      <ul>
+        <li>Cures the limitation of DIO-Pins</li>
+      </ul>
+      <h4>Disadvantage Daisy-Chain</h4>
+      <ul>
+        <li>Way Slower Than the Direct/Normal Connection</li>
+      </ul>
+      <h2>Clock Cycle Dive Deeper</h2>
+      <p>
+        There are two main factors in the CLK <b>Clock Polarity</b> and
+        <b>Clock Phase</b>.
+      </p>
+      <ul>
+        <li>
+          <b>CLK Polarity</b>: This indicates the intial logic either a zero or
+          a one.
+        </li>
+        <li>
+          <b>CLK Phase</b>: This indicates the reading and writing on one pulse,
+          If CLK_PH = 0 this means that the <b>sample Reading</b> is in
+          <b>Leading Edge</b> while the <b>Sample Writing</b> is in
+          <b>Falling Edge</b> and Vice Versa if CLK_PH=1.
+        </li>
+      </ul>
+      <figure>
+        <img src="Pics/SPI-CLK.png" alt="CLK" />
+      </figure>
+    </section>
+  </body>
+</html>
