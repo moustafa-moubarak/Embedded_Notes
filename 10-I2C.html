@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timer0-Part1-</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Inter Integrated Circuit-I<sup>2</sup>C-</h1>
+    <p>
+      It can also be calle -TWI- which stands for <b>Two wire Interface</b>.
+    </p>
+
+    <section>
+      <h2>I2C Specs</h2>
+      <ul>
+        <li>Serial</li>
+        <li>Synchronous</li>
+        <li>Half-Duplex</li>
+        <li>Multi-Master Multi-Slave</li>
+      </ul>
+
+      <figure>
+        <img src="Pics/I2C_Busses.JPG" alt="I2C" />
+        <p>
+          As we specified in the properties of I2C that its synch so we do have
+          a shared clk and since its half-duplex so there is only one wire for
+          sending and recieving the data which we called data-wire .
+        </p>
+      </figure>
+      <p>
+        The CLK and Data bus are connected to a pull up resistor which means
+        that all the MCs reads a signal of 1 so if a master wanna send a signal
+        of 1 to a slave it doesn't need to do anything we call this process
+        <b>Floating</b> and we call the 1 signal in that case
+        <b>Recessive Bit</b> while the 0 we call it <b>Dominant Bit</b> and that
+        is because if one master want to send a 0 the whole bus will change to a
+        zero to transfere it. so now lets dive deeper into the hardware and see
+        how it actually works and transfers the signal.
+      </p>
+      <figure>
+        <img src="Pics/I2C_IC.JPG" alt="I2C_IC" />
+      </figure>
+      <p>
+        This internal circuit is called <b>Open drain</b>, Such that if we wanna
+        write in the register a 1 the inverter will switch it to 0 and the wire
+        will remain floating such that the buss will carry a signal of 1, while
+        if we wanna write a signal of 0 the inverter will change it to a 0 and
+        will connect the circuit to the ground and the bus line will change into
+        a ZERO. <br />
+        Side-Note: The Pull up Resistor is 4.7 Kohm
+      </p>
+    </section>
+
+    <section>
+      <h2>I2C Frame</h2>
+      <figure>
+        <img src="Pics/I2C_Frame.JPG" alt="I2C_F" />
+      </figure>
+      <h3>Master Process to Write</h3>
+      <ol>
+        <li><b>Start Bit</b>: 0</li>
+        <li><b>Slave Address</b>: 7-bits</li>
+        <li><b>Operation</b>: 0 to write / 1 to read</li>
+        <li>
+          <b>Acknowledge/Not-Acknowledge</b>: Validation to say that the slave
+          is ready to recieve data. o to Ack / 1 to NAck
+        </li>
+        <li><b>Data</b>: 8-bits</li>
+        <li><b>Acknowledge/Not-Acknowledge</b></li>
+        .....remains on the same process till we wanna stop
+        <li>
+          Master sends Not-Acknoledge, which is optional we can send a stop
+          right away
+        </li>
+        <li><b>stop</b>: By sending a 1 on the Bus</li>
+      </ol>
+      <p>
+        <b
+          >The Master Is the CLK Source and the Initiator to the Process of
+          Communication either write or read and the one that selects the slave
+          it wanna interface with</b
+        >
+      </p>
+    </section>
+
+    <section>
+      <h2>SDA BUS</h2>
+
+      <figure>
+        <img src="Pics/I2C-SDA.JPG" alt="SDA" />
+        <p>
+          The Diagram above draws a scenario where we have 3 Masters connected
+          to the I2C and we wanna discuss what's been written on the SDA-bus.
+        </p>
+      </figure>
+      <ol>
+        <li>All three Masters sent a signal of 1 in the beginning</li>
+        <li>The SDA writes a signal of 1</li>
+        <li>
+          Each Master compares the value written on the SDA to the value he
+          wanted to write in the beginning and since they all needed a 1 so they
+          all move forward.
+        </li>
+        <li>
+          In the Second CLK High Pulse M1 and M2 wanted to write a 0 while M3
+          wanted a 1
+        </li>
+        <li>Since 0 is the dominant bit, therfore a 0 is written on the SDA</li>
+        <li>
+          Now each master Compares the SDA written value with his original
+          value, where M1 and M2 won't have a problem and will move forward,
+          while M3 will deduce that he Lost the <b>ARBITRATION</b>. and will
+          stop transmitting.
+        </li>
+      </ol>
+      <h3>So what is an Arbitration!!</h3>
+      <p>
+        Its the phase where all the masters wanna write their values on the SDA
+        bus and the one who always wins is the one with most 0s.
+      </p>
+      <h4>
+        Let's dive deeper into this concept and reflect it on the Frame we
+        discussed earlier
+      </h4>
+      <ol>
+        <li>So the Frame said we need to begin with a start of 0</li>
+        <li>Then the MCs Sends the 7-bit Address of the slave</li>
+        <li>
+          Since the MC starts with <b><em>Most segnificant Bit</em></b
+          >(from Right to Left), therfore it will start reading the first bit of
+          the address.
+        </li>
+        <li>
+          The MC that's gonna win the Arbitration, is the one whom got more
+          zeros from the right.
+        </li>
+      </ol>
+      <h4>
+        As we know for now that we do have 7 bits reserved for the slave
+        addresses, so does that mean we can connect 128 device to the MC!!
+      </h4>
+      <p>
+        The answer is a partial yes, where its true we have 128 different
+        addresses, yet not all of them can be used cuz there are some
+        <b>RESERVED</b> addresses and those are:
+      </p>
+      <ul>
+        <li>
+          <b>Broadcast</b>(000 0000): This is researved cuz it will always take
+          the priority and will talk to all slaves
+        </li>
+        <li>
+          <b>Reserved Bits</b>(1111 xxx): so 2<sup>3</sup> gives us 8 different
+          values.
+        </li>
+      </ul>
+      <p>
+        Therfore we can say that we have a total of 9 reserved addresses out of
+        the 128 so we can only connect only 119 slave(device).
+      </p>
+
+      <p>
+        Let us draw a second scenario were 2 Masters were targeting the same
+        addresses so the upcoming bit would be either a 0 to write or a 1 to
+        read, therfore by applying the same concept we can conclude that the
+        writing got a higher priority.
+      </p>
+
+      <p>
+        Now a final scenario we can draw were the 2 Masters sent the same
+        addresses and wanted to make the same operation now the next bits would
+        be the data bits, let us say that they will even send the same data bits
+        this scenario is called <b>Win win Operation</b>.
+      </p>
+    </section>
+
+    <section>
+      <h2>Clock Stretching</h2>
+      <p>
+        As we discussed earlier the default handler of the clk is the master yet
+        there is a case were the slave is slower than the clk sent and since
+        they are both connected to the same SCL and got an open drain circuit so
+        the slave can write a 0 on the SCL and if the pulse is low the master
+        will wait till the high pulse come to continue its original process this
+        concept is called <b>CLK Stretching</b>
+      </p>
+    </section>
+
+    <section>
+      <h2>Repeated start</h2>
+      <p>
+        If a Master won an arbitration and successfully sent/recieved data and
+        then it sent a stopping signal therfore a new arbitration will formulate
+        to see the upcoming data that will be sent, yet what if we instead
+        sending a stop we sent a new start, this will allow the MC that won the
+        arbitration to continue talking and then it can send the new slave
+        address and the operation, as long as a stop was not sent and the Master
+        didn't leave the bus no one will ever let him out this can be a double
+        sowrded weapon.
+      </p>
+    </section>
+
+    <section>
+      <h2>Network Starvation</h2>
+      <p>
+        It means that a Master kept the data line for itself and didn't allow
+        any other master to send or recieve data just took the bus for itself
+        till all the other slaves and masters starved.
+      </p>
+      <h3>Causes</h3>
+      <ol>
+        <li>Repeated Start</li>
+        <li>CLK Stretching</li>
+        <li>Data Endless</li>
+      </ol>
+    </section>
+  </body>
+</html>
